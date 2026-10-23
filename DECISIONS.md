@@ -128,3 +128,26 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
   decrypts the RFC 8291 payload. That proves `npm:web-push` works in the Supabase edge runtime. The SW
   push handler is tested with CDP `ServiceWorker.deliverPushMessage`. Real delivery through
   FCM/APNs/Mozilla, and clicking the notification, are in the manual checklist.
+
+## Encrypted relay
+
+- **Key schedule:** ECDH(ephemeral, target device key) → HKDF-SHA-256 (random 32-byte salt, info
+  `droplink-relay-v1:<transferId>`) → AES-GCM-256, unique per transfer. IV = 4-byte random prefix ‖
+  fileIndex ‖ chunkIndex. AAD = `transferId|fileIndex|chunkIndex|chunkCount`, so chunks can't be
+  reordered, swapped between transfers, or dropped from the end.
+- **The manifest is object `{uid}/{transferId}/manifest`** (encrypted with fileIndex `0xFFFFFFFF`).
+  It holds names, sizes, types and chunk counts. The `transfers` row only has counts, total size and
+  `relay_params` (ephemeral public key, salt, IV prefix).
+- **Relay only covers files not yet delivered.** If P2P died partway, the remaining files are
+  relayed (the status goes back `p2p → pending` first). The 100 MB check uses the row's total size,
+  so a 150 MB transfer whose last 40 MB failed waits in the outbox rather than relaying.
+- **Upload/download concurrency is 3 × 1 MiB**; the receiver writes strictly in order through the
+  same sinks as P2P, so memory stays at a few MB.
+- **A failed relay upload isn't retried through the relay** (`relay_params` is immutable once set);
+  the transfer is parked in the outbox and goes P2P when the target appears.
+- **Inbox checks:** on start, when the app becomes visible, every 2 minutes, and on
+  `/receive?transfer=`. A decryption failure is final (status `failed`, objects deleted); network
+  errors retry.
+- **Cleanup:** `pg_cron` hourly → `private.run_relay_cleanup()` → marks relay-less expired rows in SQL,
+  then calls `relay-cleanup` via `pg_net` with a Vault-stored URL and secret. The function also
+  removes relays abandoned for more than 2 h, which covers uploads that lied about sizes.

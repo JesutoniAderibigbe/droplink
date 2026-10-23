@@ -147,6 +147,8 @@ export class OutgoingTransfer {
   readonly abort = new AbortController();
   phase: OutgoingPhase = 'preparing';
   detail = '';
+  /** Why the relay wasn't used (shown while queued). */
+  relayNote = '';
   waitUntil: number | null = null;
   readonly createdAt = Date.now();
 
@@ -225,7 +227,10 @@ export class OutgoingTransfer {
           if ((await this.deps.relay(this, remaining)) === 'relayed') return;
         }
         this.waitUntil = null;
-        this.emit('queued', `Will send when ${this.view().targetName} is online`);
+        this.emit(
+          'queued',
+          `${this.relayNote ? `${this.relayNote} ` : ''}Will send when ${this.view().targetName} is online.`,
+        );
         await this.waitForJoin(signal);
       }
     } catch (e) {

@@ -49,6 +49,30 @@ export function configureEngine(deps: Partial<Pick<EngineDeps, 'notifyOffline' |
 }
 
 let engine: TransferEngine | null = null;
+let historyKey: string | null = null;
+
+export function upsertIncoming(v: IncomingView): void {
+  transfers.incoming = upsert(transfers.incoming, v);
+}
+
+/** Add to this device's received history, and tell toasts/notifications. */
+export function recordReceivedFile(t: IncomingView, f: IncomingFileView): void {
+  const item: ReceivedItem = {
+    transferId: t.id,
+    fileId: f.id,
+    name: f.name,
+    savedName: f.saved?.savedName ?? f.name,
+    size: f.size,
+    fromName: t.fromName,
+    location: f.saved?.location ?? 'download',
+    text: f.saved?.text,
+    at: Date.now(),
+    checksumOk: f.checksumOk,
+  };
+  transfers.received = [item, ...transfers.received].slice(0, HISTORY_LIMIT);
+  if (historyKey) void set(historyKey, $state.snapshot(transfers.received), kvStore);
+  for (const fn of receivedListeners) fn(t, f, item);
+}
 export function getEngine(): TransferEngine {
   if (!engine) throw new Error('Transfer engine not started');
   return engine;
@@ -66,6 +90,7 @@ const HISTORY_LIMIT = 200;
 
 onSessionReady(({ userId, device }) => {
   void cleanupTempFiles();
+  historyKey = keys.received(device.id);
   void get<ReceivedItem[]>(keys.received(device.id), kvStore).then((h) => {
     transfers.received = h ?? [];
   });
@@ -90,26 +115,8 @@ onSessionReady(({ userId, device }) => {
       transfers.outgoing = upsert(transfers.outgoing, v);
       void persistOutbox(v);
     },
-    onIncoming: (v) => {
-      transfers.incoming = upsert(transfers.incoming, v);
-    },
-    onFileReceived: (t, f) => {
-      const item: ReceivedItem = {
-        transferId: t.id,
-        fileId: f.id,
-        name: f.name,
-        savedName: f.saved?.savedName ?? f.name,
-        size: f.size,
-        fromName: t.fromName,
-        location: f.saved?.location ?? 'download',
-        text: f.saved?.text,
-        at: Date.now(),
-        checksumOk: f.checksumOk,
-      };
-      transfers.received = [item, ...transfers.received].slice(0, HISTORY_LIMIT);
-      void set(keys.received(device.id), $state.snapshot(transfers.received), kvStore);
-      for (const fn of receivedListeners) fn(t, f, item);
-    },
+    onIncoming: upsertIncoming,
+    onFileReceived: recordReceivedFile,
   });
   engine = e;
   void resumePending(e);

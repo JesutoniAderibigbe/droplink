@@ -5,6 +5,7 @@
   import FolderCard from '../components/FolderCard.svelte';
   import { router } from '../lib/state/router.svelte';
   import { getEngine } from '../lib/state/transfers.svelte';
+  import { checkInbox } from '../lib/state/relay.svelte';
   import { presence } from '../lib/state/presence.svelte';
 
   // Opened from a push notification (/receive?transfer=<id>): tell the waiting
@@ -16,6 +17,7 @@
     const id = router.query.get('transfer');
     if (!id || presence.status !== 'connected' || announced.has(id)) return;
     announced.add(id);
+    void checkInbox(); // it may already be waiting in the relay
     getEngine()
       .announceReady(id)
       .catch((e) => console.warn('[receive] announce failed', (e as Error)?.message));
