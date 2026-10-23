@@ -95,8 +95,8 @@
     {:else}
       <form class="stack" onsubmit={onSubmitCode}>
         <p>
-          We sent a sign-in link to <strong>{email}</strong>. Open it on this device. If the
-          email also shows a 6-digit code, you can type it here instead.
+          We sent a sign-in link to <strong>{email}</strong>. Open it on this device. If the email
+          also shows a 6-digit code, you can type it here instead.
         </p>
         <div class="field">
           <label for="code">Code</label>
