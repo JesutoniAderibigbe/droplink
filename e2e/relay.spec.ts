@@ -70,12 +70,12 @@ test('relay: Mac fully offline, 50 MB arrives intact later, relay copy deleted',
   const name = 'Quarterly secret plans.mov';
 
   await phone.goto('/send');
-  await expect(phone.getByText('Offline', { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(phone.getByText(/Offline/).first()).toBeVisible({ timeout: 30_000 });
   const filePath = path.join(mkdtempSync(path.join(tmpdir(), 'droplink-')), name);
   writeFileSync(filePath, data);
   await phone.locator('input[type=file]').setInputFiles(filePath);
-  await phone.getByRole('button', { name: 'Send 1 file' }).click();
-  await expect(phone.getByText(/Waiting for/)).toBeVisible();
+  await phone.getByRole('button', { name: /^Send to / }).click();
+  await expect(phone.getByText(/Knocking on/)).toBeVisible();
   await expect(phone.getByText('Uploaded securely')).toBeVisible({ timeout: 2 * 60_000 });
 
   // Server side: relayed, only ciphertext, no names anywhere.
@@ -148,13 +148,13 @@ test('relay cleanup: expired relays are deleted by the hourly job', async ({ bro
   await mac.context().close();
 
   await phone.goto('/send');
-  await expect(phone.getByText('Offline', { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(phone.getByText(/Offline/).first()).toBeVisible({ timeout: 30_000 });
   await phone.locator('input[type=file]').setInputFiles({
     name: 'old.txt',
     mimeType: 'text/plain',
     buffer: Buffer.from('x'.repeat(3000)),
   });
-  await phone.getByRole('button', { name: 'Send 1 file' }).click();
+  await phone.getByRole('button', { name: /^Send to / }).click();
   await expect(phone.getByText('Uploaded securely')).toBeVisible({ timeout: 60_000 });
 
   const uid = await userId(email);

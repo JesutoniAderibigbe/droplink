@@ -72,7 +72,7 @@ async function sendFile(sender: Page, receiver: Page, file: string) {
   });
   await sender.goto('/send');
   await sender.locator('input[type=file]').setInputFiles(file);
-  await sender.getByRole('button', { name: /^Send 1 file$/ }).click();
+  await sender.getByRole('button', { name: /^Send to / }).click();
   return hashes;
 }
 
@@ -89,7 +89,7 @@ test('sends a 20 MB file P2P and it arrives intact', async ({ browser }) => {
   const expected = await sha256File(file);
   const hashes = await sendFile(phone, mac, file);
 
-  await expect(phone.getByText('Delivered')).toBeVisible({ timeout: 60_000 });
+  await expect(phone.getByText('Delivered').first()).toBeVisible({ timeout: 60_000 });
   await expect(mac.getByText('✓ checksum')).toBeVisible();
   expect(hashes).toEqual([`${expected}:true`]);
 });
@@ -110,7 +110,7 @@ test('sends a 1 GB file with stable memory and a matching SHA-256', async ({ bro
   const memReceiver = await memorySampler(mac);
   const started = Date.now();
   const hashes = await sendFile(phone, mac, file);
-  await expect(phone.getByText('Delivered')).toBeVisible({ timeout: 8 * 60_000 });
+  await expect(phone.getByText('Delivered').first()).toBeVisible({ timeout: 8 * 60_000 });
   const seconds = (Date.now() - started) / 1000;
   memSender.stop();
   memReceiver.stop();
@@ -157,7 +157,7 @@ test('resumes a file after the connection drops mid-transfer', async ({ browser 
     (window as unknown as { __droplink: { dropConnections(): void } }).__droplink.dropConnections(),
   );
 
-  await expect(phone.getByText('Delivered')).toBeVisible({ timeout: 3 * 60_000 });
+  await expect(phone.getByText('Delivered').first()).toBeVisible({ timeout: 3 * 60_000 });
   expect(resumes.length).toBeGreaterThan(0);
   expect(resumes[0]).toBeGreaterThan(0); // resumed mid-file, not from scratch
   expect(hashes).toEqual([`${expected}:true`]);

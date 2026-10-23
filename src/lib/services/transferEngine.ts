@@ -196,6 +196,13 @@ export class OutgoingTransfer {
     this.abort.abort();
   }
 
+  /** "Relay now": stop waiting for the target and go straight to the fallback. */
+  relayNow(): void {
+    if (this.phase !== 'waiting' || this.waitUntil === null) return;
+    this.waitUntil = Date.now();
+    this.wake?.();
+  }
+
   cancelFile(fileId: string): void {
     this.queue.cancel(fileId);
     if (this.queue.finished && !this.peer) this.abort.abort();

@@ -18,6 +18,7 @@ import { defaultSinkFactory } from '../services/sinks';
 import type { IncomingFileView, IncomingView } from '../services/transferEngine';
 import * as api from '../services/transfersApi';
 import { deviceById, onSessionReady, session } from './session.svelte';
+import { settings } from './settings.svelte';
 import { configureEngine, recordReceivedFile, upsertIncoming } from './transfers.svelte';
 
 const INBOX_INTERVAL_MS = 2 * 60_000;
@@ -25,6 +26,10 @@ const INBOX_INTERVAL_MS = 2 * 60_000;
 configureEngine({
   async relay(t, files) {
     t.relayNote = '';
+    if (!settings.relayEnabled) {
+      t.relayNote = 'The encrypted relay is off in Settings.';
+      return 'not-eligible';
+    }
     try {
       await checkRelayEligible(t.queue.totalBytes, files);
     } catch (e) {

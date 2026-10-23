@@ -37,27 +37,27 @@ test('target closed: sender waits with a countdown, target opens from the notifi
   const email = uniqueEmail('m8');
   const phone = await newDevice(browser, email);
   const mac = await newDevice(browser, email);
-  const macName = (await mac.locator('.this-device h1').textContent())!.trim();
+  const macName = (await mac.locator('h1.this-device').textContent())!.trim();
   const macContext = mac.context();
   await mac.close(); // DropLink closed on the Mac (its identity stays in the context)
 
   await phone.goto('/send');
-  await expect(phone.getByText('Offline', { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(phone.getByText(/Offline/).first()).toBeVisible({ timeout: 30_000 });
   await phone.locator('input[type=file]').setInputFiles({
     name: 'from-phone.jpg',
     mimeType: 'image/jpeg',
     buffer: Buffer.alloc(2_000_000, 9),
   });
-  await phone.getByRole('button', { name: 'Send 1 file' }).click();
-  await expect(phone.getByText(`Waiting for ${macName}…`)).toBeVisible();
-  await expect(phone.getByText(/\d+ s$/)).toBeVisible();
+  await phone.getByRole('button', { name: /^Send to / }).click();
+  await expect(phone.getByText(`Knocking on ${macName}`)).toBeVisible();
+  await expect(phone.getByText(/^\d+s$/)).toBeVisible();
 
   // What a notification click does: open /receive?transfer=<id>.
   const transfer = await latestTransferTo(email);
   const reopened = await macContext.newPage();
   await reopened.goto(`/receive?transfer=${transfer.id}`);
 
-  await expect(phone.getByText('Delivered')).toBeVisible({ timeout: 30_000 });
+  await expect(phone.getByText('Delivered').first()).toBeVisible({ timeout: 30_000 });
   await expect(reopened.getByText('from-phone.jpg').first()).toBeVisible();
   await expect.poll(async () => (await latestTransferTo(email)).status).toBe('delivered');
 });

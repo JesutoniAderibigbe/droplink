@@ -10,6 +10,8 @@ export interface Settings {
   /** Share target: send to the default device without showing the picker. */
   autoSend: boolean;
   lastTargetId: string | null;
+  /** Use the encrypted relay when the other device doesn't answer (≤ 100 MB). */
+  relayEnabled: boolean;
   /** Hide the notifications / install explainer cards once dismissed. */
   dismissedPushCard: boolean;
   dismissedInstallCard: boolean;
@@ -19,6 +21,7 @@ const defaults: Settings = {
   defaultTargetId: null,
   autoSend: false,
   lastTargetId: null,
+  relayEnabled: true,
   dismissedPushCard: false,
   dismissedInstallCard: false,
 };

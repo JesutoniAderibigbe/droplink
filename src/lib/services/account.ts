@@ -13,6 +13,7 @@ export async function deleteAccount(userId: string, deviceId: string | null): Pr
     del(keys.identity(userId), kvStore),
     del(keys.settings(userId), kvStore),
     deviceId ? del(keys.received(deviceId), kvStore) : Promise.resolve(),
+    deviceId ? del(keys.sent(deviceId), kvStore) : Promise.resolve(),
     del(keys.dirHandle, kvStore),
     clear(outboxStore),
     navigator.serviceWorker?.ready

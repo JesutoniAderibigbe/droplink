@@ -71,3 +71,21 @@ export async function notifyDevice(transferId: string): Promise<void> {
   const { error } = await supabase.functions.invoke('notify-device', { body: { transferId } });
   if (error) throw error;
 }
+
+/** Is this browser currently subscribed (and allowed)? */
+export async function isSubscribed(): Promise<boolean> {
+  if (!pushSupported() || Notification.permission !== 'granted') return false;
+  const reg = await navigator.serviceWorker.ready;
+  return !!(await reg.pushManager.getSubscription());
+}
+
+/** Turn notifications off for this device: forget the subscription everywhere. */
+export async function disablePush(): Promise<void> {
+  if (!pushSupported()) return;
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription();
+  if (!sub) return;
+  // RLS lets a user delete their own devices' subscriptions.
+  await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+  await sub.unsubscribe();
+}

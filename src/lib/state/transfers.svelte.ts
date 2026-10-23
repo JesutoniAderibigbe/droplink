@@ -32,7 +32,23 @@ export const transfers = $state<{
   outgoing: OutgoingView[];
   incoming: IncomingView[];
   received: ReceivedItem[];
-}>({ outgoing: [], incoming: [], received: [] });
+  sent: SentItem[];
+}>({ outgoing: [], incoming: [], received: [], sent: [] });
+
+/**
+ * Files this device delivered. Kept only on this device: the server never
+ * stores file names. Feeds Home's "Recent".
+ */
+export interface SentItem {
+  transferId: string;
+  fileId: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  toName: string;
+  via: 'p2p' | 'relay';
+  at: number;
+}
 
 type ReceivedListener = (t: IncomingView, f: IncomingFileView, item: ReceivedItem) => void;
 const receivedListeners = new Set<ReceivedListener>();
@@ -50,6 +66,29 @@ export function configureEngine(deps: Partial<Pick<EngineDeps, 'notifyOffline' |
 
 let engine: TransferEngine | null = null;
 let historyKey: string | null = null;
+let sentKey: string | null = null;
+const recordedSent = new Set<string>();
+
+/** When a send finishes, remember the delivered files (names stay local). */
+function recordSent(v: OutgoingView): void {
+  if (!['delivered', 'relayed', 'partial'].includes(v.phase) || recordedSent.has(v.id)) return;
+  recordedSent.add(v.id);
+  const t = engine?.getOutgoing(v.id);
+  const items: SentItem[] = v.files
+    .filter((f) => f.status === 'done')
+    .map((f) => ({
+      transferId: v.id,
+      fileId: f.id,
+      name: f.name,
+      mimeType: t?.files.get(f.id)?.mimeType ?? '',
+      size: f.size,
+      toName: v.targetName,
+      via: v.phase === 'relayed' ? 'relay' : 'p2p',
+      at: Date.now(),
+    }));
+  transfers.sent = [...items, ...transfers.sent].slice(0, HISTORY_LIMIT);
+  if (sentKey) void set(sentKey, $state.snapshot(transfers.sent), kvStore);
+}
 
 export function upsertIncoming(v: IncomingView): void {
   transfers.incoming = upsert(transfers.incoming, v);
@@ -91,6 +130,10 @@ const HISTORY_LIMIT = 200;
 onSessionReady(({ userId, device }) => {
   void cleanupTempFiles();
   historyKey = keys.received(device.id);
+  sentKey = keys.sent(device.id);
+  void get<SentItem[]>(keys.sent(device.id), kvStore).then((h) => {
+    transfers.sent = h ?? [];
+  });
   void get<ReceivedItem[]>(keys.received(device.id), kvStore).then((h) => {
     transfers.received = h ?? [];
   });
@@ -114,6 +157,7 @@ onSessionReady(({ userId, device }) => {
     onOutgoing: (v) => {
       transfers.outgoing = upsert(transfers.outgoing, v);
       void persistOutbox(v);
+      recordSent(v);
     },
     onIncoming: upsertIncoming,
     onFileReceived: recordReceivedFile,
@@ -132,6 +176,7 @@ onSessionReady(({ userId, device }) => {
     transfers.outgoing = [];
     transfers.incoming = [];
     transfers.received = [];
+    transfers.sent = [];
   };
 });
 
@@ -182,11 +227,15 @@ async function resumePending(e: TransferEngine): Promise<void> {
   }
 }
 
-export function sendFiles(targetId: string, files: SendFile[]): string | null {
+/** Start a send. Returns its createdAt, which identifies its view in transfers.outgoing. */
+export function sendFiles(targetId: string, files: SendFile[]): number | null {
   const target = deviceById(targetId);
   if (!target || files.length === 0) return null;
-  const t = getEngine().send(target, files);
-  return t.id || null;
+  return getEngine().send(target, files).createdAt;
+}
+
+export function relayNow(id: string): void {
+  engine?.getOutgoing(id)?.relayNow();
 }
 
 export function cancelOutgoing(id: string): void {
@@ -203,7 +252,11 @@ export function cancelIncomingFile(transferId: string, fileId: string): void {
 
 export async function clearHistory(): Promise<void> {
   transfers.received = [];
-  if (session.device) await set(keys.received(session.device.id), [], kvStore);
+  transfers.sent = [];
+  if (session.device) {
+    await set(keys.received(session.device.id), [], kvStore);
+    await set(keys.sent(session.device.id), [], kvStore);
+  }
 }
 
 /** Wrap browser File objects for sending. */

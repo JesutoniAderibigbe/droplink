@@ -9,9 +9,7 @@ const passwordFor = (email: string) => `pw-${email}-Correct-Horse`;
 export async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/');
   await signInHere(page, email);
-  await expect(page.getByText('This device', { exact: true }).first()).toBeVisible({
-    timeout: 20_000,
-  });
+  await expect(page.getByRole('link', { name: 'Send files' })).toBeVisible({ timeout: 20_000 });
 }
 
 /** Same, on whatever page is showing the sign-in form. */
@@ -23,7 +21,14 @@ export async function signInHere(page: Page, email: string): Promise<void> {
   await page
     .getByRole('button', { name: signUp ? 'Create account' : 'Sign in', exact: true })
     .click();
-  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible({ timeout: 20_000 });
+  // Signed in once the sign-in form is gone and setup has finished.
+  await expect(page.getByRole('heading', { name: /^(Sign in|Create your account)$/ })).toHaveCount(
+    0,
+    {
+      timeout: 20_000,
+    },
+  );
+  await expect(page.getByText('Setting up this device…')).toHaveCount(0, { timeout: 20_000 });
   created.add(email);
 }
 

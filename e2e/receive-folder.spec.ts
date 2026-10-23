@@ -31,7 +31,7 @@ test('saves into the chosen folder with (1) collision names', async ({ browser }
     await phone
       .locator('input[type=file]')
       .setInputFiles({ name: 'hello.txt', mimeType: 'text/plain', buffer: Buffer.from(body) });
-    await phone.getByRole('button', { name: 'Send 1 file' }).click();
+    await phone.getByRole('button', { name: /^Send to / }).click();
     await expect(phone.getByText('Delivered').first()).toBeVisible({ timeout: 30_000 });
   }
   await expect(mac.getByText('hello (1).txt').first()).toBeVisible();

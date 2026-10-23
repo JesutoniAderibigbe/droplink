@@ -9,7 +9,6 @@
   import '../lib/state/push.svelte';
   import '../lib/state/relay.svelte';
   import Toasts from '../components/Toasts.svelte';
-  import AppHeader from '../components/AppHeader.svelte';
   import Home from './Home.svelte';
   import Settings from './Settings.svelte';
   import Send from './Send.svelte';
@@ -21,7 +20,6 @@
   });
 </script>
 
-<AppHeader />
 <Toasts />
 
 {#if session.phase === 'error'}
@@ -33,7 +31,7 @@
     </div>
   </main>
 {:else if session.phase !== 'ready'}
-  <p class="container muted" aria-live="polite">Setting up this device…</p>
+  <p class="container muted setup" aria-live="polite">Setting up this device…</p>
 {:else if router.route === 'home'}
   <Home />
 {:else if router.route === 'settings'}

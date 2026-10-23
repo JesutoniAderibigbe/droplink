@@ -55,7 +55,7 @@ test('opens offline from the precached shell', async ({ browser }) => {
       });
     await expect.poll(portOpen, { timeout: 10_000 }).toBe(false);
     await page.goto(`https://localhost:${port}/settings`);
-    await expect(page.getByRole('heading', { name: 'DropLink' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Your files/ })).toBeVisible();
   } finally {
     try {
       process.kill(-server.pid!);
@@ -100,8 +100,8 @@ test('share target: shared photo + text reach the other device', async ({ browse
 
   await expect(phone.getByText('IMG_0001.jpg')).toBeVisible();
   await expect(phone.getByText('https://example.com/look')).toBeVisible();
-  await phone.getByRole('button', { name: 'Send 2 files' }).click();
-  await expect(phone.getByText('Delivered')).toBeVisible({ timeout: 30_000 });
+  await phone.getByRole('button', { name: /^Send to / }).click();
+  await expect(phone.getByText('Delivered').first()).toBeVisible({ timeout: 30_000 });
 
   await expect(mac.getByText('IMG_0001.jpg').first()).toBeVisible();
   await expect(mac.getByText('https://example.com/look').first()).toBeVisible();
@@ -109,20 +109,21 @@ test('share target: shared photo + text reach the other device', async ({ browse
 
   // One-tap mode: turn on auto-send to the default device, share again.
   await phone.goto('/settings');
-  await phone.getByLabel('Default device', { exact: true }).selectOption({ index: 1 });
-  await phone.getByLabel('Send to my default device without asking').check();
+  await phone.getByRole('button', { name: /^More options for / }).click();
+  await phone.getByRole('button', { name: 'Make default' }).click();
+  await phone.getByLabel(/One-tap send/).check();
   // Settings are written to IndexedDB asynchronously; confirm they persisted
   // before leaving the page.
   await phone.waitForTimeout(500);
   await phone.reload();
-  await expect(phone.getByLabel('Send to my default device without asking')).toBeChecked({
+  await expect(phone.getByLabel(/One-tap send/)).toBeChecked({
     timeout: 20_000,
   });
   await phone.goto('/');
   await shareFromAnotherApp(phone, [
     { name: 'second.jpg', mimeType: 'image/jpeg', buffer: Buffer.alloc(1000, 1) },
   ]);
-  await expect(phone.getByText('Delivered')).toBeVisible({ timeout: 30_000 });
+  await expect(phone.getByText('Delivered').first()).toBeVisible({ timeout: 30_000 });
   await expect(mac.getByText('second.jpg').first()).toBeVisible();
 });
 
@@ -144,7 +145,7 @@ test('share while signed out: files wait, then send after sign-in', async ({ bro
   const { signInHere } = await import('./helpers');
   await signInHere(phone, email);
   await expect(phone.getByText('offline-share.png')).toBeVisible();
-  await phone.getByRole('button', { name: 'Send 1 file' }).click();
-  await expect(phone.getByText('Delivered')).toBeVisible({ timeout: 30_000 });
+  await phone.getByRole('button', { name: /^Send to / }).click();
+  await expect(phone.getByText('Delivered').first()).toBeVisible({ timeout: 30_000 });
   await expect(mac.getByText('offline-share.png').first()).toBeVisible();
 });

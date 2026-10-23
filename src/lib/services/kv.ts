@@ -11,5 +11,6 @@ export const keys = {
   identity: (userId: string) => `identity:${userId}`,
   settings: (userId: string) => `settings:${userId}`,
   received: (deviceId: string) => `received:${deviceId}`,
+  sent: (deviceId: string) => `sent:${deviceId}`,
   dirHandle: 'download-dir',
 } as const;

@@ -190,3 +190,20 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
 - **Google is hidden until configured** (`VITE_ENABLE_GOOGLE_LOGIN=true`), so the button never leads
   to a "provider not enabled" error.
 - There's no password reset yet: it would need email delivery.
+
+## Signal UI redesign
+
+- **Source:** the "DropLink UI" design canvas (claude.ai/artifact/HoJUpYDAJ3iDcpfuXZtPy6): Signal theme
+  (#F3F4F6 ground, signal orange #E8400F, Bricolage Grotesque + Geist), beacon orb, device radar, beam
+  and countdown animations. All motion stops under `prefers-reduced-motion`.
+- **Fonts are bundled** (`@fontsource-variable/*`) rather than loaded from Google Fonts: the CSP allows
+  no third-party hosts, and it keeps the app private and offline-capable.
+- **Contrast:** white on #E8400F is 4.06:1, which passes AA only for large text. The big bottom CTAs
+  keep the signal orange (19px bold); smaller orange buttons use the design's deeper #C4360C (5.4:1).
+  Small green status text uses the darker #0B6E36.
+- **Dark mode is derived** from the light design's roles, because the app follows the OS theme.
+- **Deviations:** the welcome card holds email + password (no magic link); the Mac incoming card has
+  no Accept/Decline, because same-account devices auto-accept; "Recent" uses a local sent/received
+  history, because the server never stores file names; placeholders ("[2.4 GB]", "[120] of 500 MB")
+  are real numbers from the database. "Relay now" and the "Encrypted relay fallback" switch are new
+  engine features the design called for.

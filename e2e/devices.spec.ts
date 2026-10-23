@@ -16,6 +16,7 @@ test('two browsers on one account see each other, and rename works', async ({ br
 
   // Rename the phone in its settings; the Mac sees the new name.
   await phone.goto('/settings');
+  await phone.getByRole('button', { name: 'Rename' }).click();
   await phone.getByLabel('Device name').fill("Toni's Pixel");
   await phone.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(phone.getByText('Saved.')).toBeVisible();
@@ -25,6 +26,7 @@ test('two browsers on one account see each other, and rename works', async ({ br
   // Remove the phone from the Mac; the phone is signed out on next load.
   await mac.goto('/settings');
   const row = mac.getByRole('listitem').filter({ hasText: "Toni's Pixel" });
+  await row.getByRole('button', { name: "More options for Toni's Pixel" }).click();
   await row.getByRole('button', { name: 'Remove…' }).click();
   await row.getByRole('button', { name: 'Yes, remove' }).click();
   await expect(mac.getByText("Toni's Pixel")).toHaveCount(0);

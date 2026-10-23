@@ -45,8 +45,8 @@ test('no CSP violations across screens and a transfer', async ({ browser }) => {
   await phone
     .locator('input[type=file]')
     .setInputFiles({ name: 'csp.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
-  await phone.getByRole('button', { name: 'Send 1 file' }).click();
-  await expect(phone.getByText('Delivered')).toBeVisible({ timeout: 30_000 });
+  await phone.getByRole('button', { name: /^Send to / }).click();
+  await expect(phone.getByText('Delivered').first()).toBeVisible({ timeout: 30_000 });
   await collect(phone);
   await collect(mac);
   expect(violations).toEqual([]);
