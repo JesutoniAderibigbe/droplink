@@ -13,8 +13,12 @@ const known: [RegExp, string][] = [
   ],
   [/too many files/i, 'Too many files in one go. Try sending fewer at a time.'],
   [
-    /Email rate limit|over_email_send_rate_limit/i,
+    /Email rate limit|over_email_send_rate_limit|only request this after/i,
     'Too many emails requested. Wait a minute and try again.',
+  ],
+  [
+    /Request rate limit|over_request_rate_limit|too many requests/i,
+    'Too many attempts. Wait a few minutes and try again.',
   ],
   [
     /Token has expired|otp_expired|invalid.*otp/i,

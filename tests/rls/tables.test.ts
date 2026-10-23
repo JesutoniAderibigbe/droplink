@@ -25,14 +25,12 @@ beforeAll(async () => {
   aMac = await addDevice(a, 'A mac');
   bLaptop = await addDevice(b, 'B laptop');
   aTransfer = await addTransfer(a, aPhone, aMac);
-  const { error } = await admin
-    .from('push_subscriptions')
-    .insert({
-      device_id: aMac,
-      endpoint: `https://push.example/${crypto.randomUUID()}`,
-      p256dh: 'k',
-      auth: 'a',
-    });
+  const { error } = await admin.from('push_subscriptions').insert({
+    device_id: aMac,
+    endpoint: `https://push.example/${crypto.randomUUID()}`,
+    p256dh: 'k',
+    auth: 'a',
+  });
   if (error) throw error;
 });
 
@@ -135,14 +133,12 @@ describe('devices', () => {
 
   it('revoking removes push subscriptions and is permanent', async () => {
     const dev = await addDevice(a, 'to revoke');
-    await admin
-      .from('push_subscriptions')
-      .insert({
-        device_id: dev,
-        endpoint: `https://push.example/${crypto.randomUUID()}`,
-        p256dh: 'k',
-        auth: 'a',
-      });
+    await admin.from('push_subscriptions').insert({
+      device_id: dev,
+      endpoint: `https://push.example/${crypto.randomUUID()}`,
+      p256dh: 'k',
+      auth: 'a',
+    });
     const { error } = await a.client
       .from('devices')
       .update({ revoked_at: new Date().toISOString() })
@@ -167,14 +163,12 @@ describe('push_subscriptions', () => {
   });
 
   it("B cannot subscribe A's device or delete A's subscription", async () => {
-    const { error } = await b.client
-      .from('push_subscriptions')
-      .insert({
-        device_id: aMac,
-        endpoint: `https://push.example/${crypto.randomUUID()}`,
-        p256dh: 'k',
-        auth: 'a',
-      });
+    const { error } = await b.client.from('push_subscriptions').insert({
+      device_id: aMac,
+      endpoint: `https://push.example/${crypto.randomUUID()}`,
+      p256dh: 'k',
+      auth: 'a',
+    });
     expect(error).not.toBeNull();
     await b.client.from('push_subscriptions').delete().eq('device_id', aMac);
     const { data } = await admin.from('push_subscriptions').select('id').eq('device_id', aMac);
@@ -189,15 +183,13 @@ describe('transfers', () => {
   });
 
   it("B cannot create a transfer involving A's devices", async () => {
-    const { error } = await b.client
-      .from('transfers')
-      .insert({
-        user_id: b.id,
-        from_device_id: bLaptop,
-        to_device_id: aMac,
-        file_count: 1,
-        total_bytes: 1,
-      });
+    const { error } = await b.client.from('transfers').insert({
+      user_id: b.id,
+      from_device_id: bLaptop,
+      to_device_id: aMac,
+      file_count: 1,
+      total_bytes: 1,
+    });
     expect(error).not.toBeNull();
   });
 

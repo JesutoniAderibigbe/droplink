@@ -14,6 +14,7 @@
     try {
       await fn();
     } catch (e) {
+      console.warn('[auth]', (e as Error)?.message);
       error = humanError(e);
     } finally {
       busy = false;
