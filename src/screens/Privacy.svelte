@@ -3,7 +3,7 @@
   const relayMb = LIMITS.relayBytesPerTransfer / 1024 / 1024;
 </script>
 
-<main class="container stack prose">
+<main id="main" tabindex="-1" class="container stack prose">
   <p><a href="/">← DropLink</a></p>
   <h1>Privacy</h1>
   <p class="muted">Plain-language summary. Last updated October 2026.</p>

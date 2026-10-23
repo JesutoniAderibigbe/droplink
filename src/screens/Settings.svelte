@@ -6,6 +6,22 @@
   import DeviceIcon from '../components/DeviceIcon.svelte';
   import { settings, updateSettings } from '../lib/state/settings.svelte';
   import { otherDevices } from '../lib/state/session.svelte';
+  import { deleteAccount } from '../lib/services/account';
+
+  let deleteText = $state('');
+  let deleting = $state(false);
+  async function onDelete(event: SubmitEvent) {
+    event.preventDefault();
+    if (deleteText !== 'DELETE' || !session.userId) return;
+    deleting = true;
+    error = '';
+    try {
+      await deleteAccount(session.userId, session.device?.id ?? null);
+    } catch (e) {
+      error = humanError(e);
+      deleting = false;
+    }
+  }
 
   const others = $derived(otherDevices());
 
@@ -41,7 +57,7 @@
   }
 </script>
 
-<main class="container stack">
+<main id="main" tabindex="-1" class="container stack">
   <h1>Settings</h1>
 
   <section class="card stack" aria-labelledby="this-title">
@@ -143,9 +159,36 @@
     </div>
     <p class="row wrap"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
   </section>
+
+  <section class="card stack danger-zone" aria-labelledby="delete-title">
+    <h2 id="delete-title">Delete account</h2>
+    <p>
+      This permanently deletes your account, all your devices, transfer history, push addresses and
+      any files waiting in the encrypted relay. It can't be undone.
+    </p>
+    <form class="stack" onsubmit={onDelete}>
+      <div class="field">
+        <label for="delete-confirm">Type DELETE to confirm</label>
+        <input
+          id="delete-confirm"
+          autocomplete="off"
+          autocapitalize="characters"
+          bind:value={deleteText}
+        />
+      </div>
+      <div>
+        <button type="submit" class="danger solid" disabled={deleteText !== 'DELETE' || deleting}>
+          {deleting ? 'Deleting…' : 'Delete my account'}
+        </button>
+      </div>
+    </form>
+  </section>
 </main>
 
 <style>
+  .danger-zone {
+    border-color: var(--danger);
+  }
   .check {
     display: flex;
     gap: 0.6rem;

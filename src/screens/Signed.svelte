@@ -25,7 +25,7 @@
 <Toasts />
 
 {#if session.phase === 'error'}
-  <main class="container stack">
+  <main id="main" tabindex="-1" class="container stack">
     <div class="card warn stack" role="alert">
       <h2>Couldn't set up this device</h2>
       <p>{session.error}</p>
@@ -43,7 +43,7 @@
 {:else if router.route === 'receive'}
   <Receive />
 {:else}
-  <main class="container stack">
+  <main id="main" tabindex="-1" class="container stack">
     <h1>Page not found</h1>
     <p><a href="/">Go home</a></p>
   </main>

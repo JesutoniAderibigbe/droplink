@@ -45,7 +45,7 @@
   };
 </script>
 
-<main class="container stack">
+<main id="main" tabindex="-1" class="container stack">
   <section class="card row this-device" aria-label="This device">
     <DeviceIcon kind={session.device!.kind} size={36} />
     <div class="grow">

@@ -41,7 +41,7 @@
   }
 </script>
 
-<main class="container stack landing">
+<main id="main" tabindex="-1" class="container stack landing">
   <header class="hero">
     <img src="/icons/icon.svg" alt="" width="72" height="72" />
     <h1>DropLink</h1>

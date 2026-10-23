@@ -3,7 +3,7 @@
   const mb = (n: number) => Math.round(n / 1024 / 1024);
 </script>
 
-<main class="container stack prose">
+<main id="main" tabindex="-1" class="container stack prose">
   <p><a href="/">← DropLink</a></p>
   <h1>Terms</h1>
   <p class="muted">Short version. Last updated October 2026.</p>

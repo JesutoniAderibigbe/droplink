@@ -4,9 +4,14 @@
 
 <header class="app-header">
   <nav class="container row spread" aria-label="Main">
-    <a href="/" class="brand row" aria-current={router.route === 'home' ? 'page' : undefined}>
+    <a
+      href="/"
+      class="brand row"
+      aria-label="DropLink home"
+      aria-current={router.route === 'home' ? 'page' : undefined}
+    >
       <img src="/icons/icon.svg" alt="" width="28" height="28" />
-      <span>DropLink</span>
+      <span class="brand-text">DropLink</span>
     </a>
     <div class="row">
       <a class="navlink" href="/send" aria-current={router.route === 'send' ? 'page' : undefined}
@@ -53,6 +58,14 @@
     padding: 0.5rem 0.55rem;
     border-radius: var(--radius-sm);
     font-size: 0.95rem;
+  }
+  @media (max-width: 380px) {
+    .brand-text {
+      display: none;
+    }
+    .navlink {
+      padding-inline: 0.45rem;
+    }
   }
   .navlink[aria-current='page'] {
     color: var(--accent);

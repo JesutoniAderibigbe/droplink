@@ -149,13 +149,11 @@ test('relay cleanup: expired relays are deleted by the hourly job', async ({ bro
 
   await phone.goto('/send');
   await expect(phone.getByText('Offline', { exact: true })).toBeVisible({ timeout: 30_000 });
-  await phone
-    .locator('input[type=file]')
-    .setInputFiles({
-      name: 'old.txt',
-      mimeType: 'text/plain',
-      buffer: Buffer.from('x'.repeat(3000)),
-    });
+  await phone.locator('input[type=file]').setInputFiles({
+    name: 'old.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('x'.repeat(3000)),
+  });
   await phone.getByRole('button', { name: 'Send 1 file' }).click();
   await expect(phone.getByText('Uploaded securely')).toBeVisible({ timeout: 60_000 });
 

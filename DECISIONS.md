@@ -151,3 +151,16 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
 - **Cleanup:** `pg_cron` hourly → `private.run_relay_cleanup()` → marks relay-less expired rows in SQL,
   then calls `relay-cleanup` via `pg_net` with a Vault-stored URL and secret. The function also
   removes relays abandoned for more than 2 h, which covers uploads that lied about sizes.
+
+## Polish
+
+- **Delete account** is an Edge Function that requires `{ confirm: "DELETE" }`. It removes relay
+  objects (via `relay_objects`, plus a sweep of the user's Storage folder) and then deletes the auth
+  user; every table cascades from `auth.users`. The client then clears this browser's keys,
+  settings, history, outbox and push subscription.
+- **Accessibility:** skip link; focus moves to the new page's `<h1>` on client-side navigation;
+  every control is labelled; 44 px minimum touch targets; `prefers-reduced-motion` disables
+  animation. Contrast was checked for every token pair in both themes (all ≥ 4.5:1; white on
+  dark-mode danger failed at 2.28 and now uses a dark text token). `e2e/a11y.spec.ts` runs axe-core
+  (WCAG 2.1 AA) on every screen in light and dark mode at 360 px and fails on horizontal scroll.
+- **Theme follows the OS** (`prefers-color-scheme`). There's no manual toggle, to keep it simple.

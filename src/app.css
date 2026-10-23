@@ -18,6 +18,7 @@
   --warn-soft: #fff4dc;
   --danger: #b42318;
   --danger-soft: #fdecea;
+  --danger-text: #ffffff;
   --focus: #2456e6;
 
   --radius: 14px;
@@ -44,6 +45,7 @@
     --warn-soft: #3a2d12;
     --danger: #ff8a80;
     --danger-soft: #3d1a18;
+    --danger-text: #2a0b09;
     --focus: #8fadff;
     --shadow: 0 1px 2px rgb(0 0 0 / 40%);
   }
@@ -230,7 +232,7 @@ button.danger {
 button.danger.solid {
   background: var(--danger);
   border-color: var(--danger);
-  color: #fff;
+  color: var(--danger-text);
 }
 button.link {
   border: none;
@@ -329,4 +331,22 @@ label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -3rem;
+  z-index: 100;
+  padding: 0.5rem 0.75rem;
+  background: var(--accent);
+  color: var(--accent-text);
+  border-radius: var(--radius-sm);
+}
+.skip-link:focus {
+  top: 0.5rem;
+}
+main:focus,
+h1:focus {
+  outline: none;
 }

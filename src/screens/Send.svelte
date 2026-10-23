@@ -99,7 +99,7 @@
   ondrop={onDrop}
 />
 
-<main class="container stack">
+<main id="main" tabindex="-1" class="container stack">
   <h1>Send</h1>
 
   {#if shareError}
@@ -155,6 +155,14 @@
 
   <section class="card stack">
     <DevicePicker {devices} bind:selected={target} {isOnline} />
+    {#if target && !isOnline(target)}
+      <p class="muted note" role="status">
+        That device is offline. It'll get a notification. If DropLink doesn't open there within
+        about 20 seconds, files up to 100 MB are end-to-end encrypted and wait for it in the relay
+        for 24 hours. Bigger ones are sent when it's next online, as long as DropLink stays open
+        here.
+      </p>
+    {/if}
     <button class="primary big" disabled={!target || files.length === 0} onclick={send}>
       {files.length ? `Send ${plural(files.length, 'file')}` : 'Send'}
     </button>
@@ -176,6 +184,10 @@
 </main>
 
 <style>
+  .note {
+    margin: 0;
+    font-size: 0.92rem;
+  }
   .drop {
     border: 2px dashed var(--border);
     border-radius: var(--radius);

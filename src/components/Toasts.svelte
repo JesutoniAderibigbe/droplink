@@ -43,7 +43,7 @@
   }
   .toast.error {
     background: var(--danger);
-    color: #fff;
+    color: var(--danger-text);
   }
   .close {
     background: transparent;

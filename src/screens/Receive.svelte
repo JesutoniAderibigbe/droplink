@@ -31,7 +31,7 @@
   }
 </script>
 
-<main class="container stack">
+<main id="main" tabindex="-1" class="container stack">
   <h1>Received</h1>
 
   <FolderCard />
