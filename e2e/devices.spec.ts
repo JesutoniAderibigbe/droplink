@@ -29,7 +29,7 @@ test('two browsers on one account see each other, and rename works', async ({ br
   await row.getByRole('button', { name: 'Yes, remove' }).click();
   await expect(mac.getByText("Toni's Pixel")).toHaveCount(0);
   await phone.reload();
-  await expect(phone.getByRole('button', { name: 'Continue with Google' })).toBeVisible({
+  await expect(phone.getByRole('heading', { name: 'Sign in' })).toBeVisible({
     timeout: 15_000,
   });
 });

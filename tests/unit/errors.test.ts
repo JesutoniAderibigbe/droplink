@@ -12,6 +12,11 @@ describe('humanError', () => {
       /wait/i,
     );
     expect(humanError(new TypeError('Failed to fetch'))).toMatch(/connection/);
+    expect(humanError(new Error('Invalid login credentials'))).toBe('Wrong email or password.');
+    expect(humanError(new Error('account_exists_or_unconfirmed'))).toMatch(/Sign in instead/);
+    expect(humanError(new Error('Password should be at least 8 characters.'))).toMatch(
+      /longer password/,
+    );
   });
 
   it('never echoes unknown raw messages', () => {

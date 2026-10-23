@@ -1,16 +1,25 @@
 <script lang="ts">
-  import { sendMagicLink, signInWithGoogle, verifyEmailCode } from '../lib/state/auth.svelte';
+  import {
+    MIN_PASSWORD_LENGTH,
+    signInWithGoogle,
+    signInWithPassword,
+    signUpWithPassword,
+  } from '../lib/state/auth.svelte';
   import { humanError } from '../lib/core/errors';
   import { listEntries } from '../lib/services/outbox';
   import { consumeRevokedNotice } from '../lib/state/session.svelte';
+
+  // Google appears once it's configured in Supabase (VITE_ENABLE_GOOGLE_LOGIN=true).
+  const googleLogin = import.meta.env.VITE_ENABLE_GOOGLE_LOGIN === 'true';
 
   const revoked = consumeRevokedNotice();
   let sharedCount = $state(0);
   void listEntries('shared').then((e) => (sharedCount = e.reduce((n, x) => n + x.files.length, 0)));
 
+  let mode = $state<'signin' | 'signup'>('signin');
   let email = $state('');
-  let code = $state('');
-  let sent = $state(false);
+  let password = $state('');
+  let showPassword = $state(false);
   let busy = $state(false);
   let error = $state('');
 
@@ -27,17 +36,17 @@
     }
   }
 
-  function onSubmitEmail(event: SubmitEvent) {
+  function onSubmit(event: SubmitEvent) {
     event.preventDefault();
-    run(async () => {
-      await sendMagicLink(email.trim());
-      sent = true;
-    });
+    const addr = email.trim();
+    run(() =>
+      mode === 'signup' ? signUpWithPassword(addr, password) : signInWithPassword(addr, password),
+    );
   }
 
-  function onSubmitCode(event: SubmitEvent) {
-    event.preventDefault();
-    run(() => verifyEmailCode(email.trim(), code.replace(/\s/g, '')));
+  function switchMode() {
+    mode = mode === 'signin' ? 'signup' : 'signin';
+    error = '';
   }
 </script>
 
@@ -70,51 +79,67 @@
   {/if}
 
   <section class="card stack" aria-labelledby="signin-title">
-    <h2 id="signin-title">Sign in</h2>
-    <button class="primary big" onclick={() => run(signInWithGoogle)} disabled={busy}>
-      Continue with Google
-    </button>
+    <h2 id="signin-title">{mode === 'signin' ? 'Sign in' : 'Create your account'}</h2>
 
-    <div class="or" aria-hidden="true"><span>or</span></div>
-
-    {#if !sent}
-      <form class="stack" onsubmit={onSubmitEmail}>
-        <div class="field">
-          <label for="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            autocomplete="email"
-            required
-            bind:value={email}
-            placeholder="you@example.com"
-          />
-        </div>
-        <button type="submit" disabled={busy || !email}>Email me a sign-in link</button>
-      </form>
-    {:else}
-      <form class="stack" onsubmit={onSubmitCode}>
-        <p>
-          We sent a sign-in link to <strong>{email}</strong>. Open it on this device. If the email
-          also shows a 6-digit code, you can type it here instead.
-        </p>
-        <div class="field">
-          <label for="code">Code</label>
-          <input
-            id="code"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            pattern="[0-9 ]*"
-            required
-            bind:value={code}
-          />
-        </div>
-        <button type="submit" class="primary" disabled={busy || code.length < 6}>Sign in</button>
-        <button type="button" class="link" onclick={() => ((sent = false), (code = ''))}
-          >Use a different email</button
-        >
-      </form>
+    {#if googleLogin}
+      <button class="primary big" onclick={() => run(signInWithGoogle)} disabled={busy}
+        >Continue with Google</button
+      >
+      <div class="or" aria-hidden="true"><span>or</span></div>
     {/if}
+
+    <form class="stack" onsubmit={onSubmit}>
+      <div class="field">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          autocomplete="email"
+          required
+          bind:value={email}
+          placeholder="you@example.com"
+        />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="row">
+          <input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            autocomplete={mode === 'signup' ? 'new-password' : 'current-password'}
+            minlength={MIN_PASSWORD_LENGTH}
+            required
+            bind:value={password}
+          />
+          <button
+            type="button"
+            class="icon"
+            aria-pressed={showPassword}
+            onclick={() => (showPassword = !showPassword)}
+          >
+            {showPassword ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {#if mode === 'signup'}<small class="muted"
+            >At least {MIN_PASSWORD_LENGTH} characters.</small
+          >{/if}
+      </div>
+      <button
+        type="submit"
+        class={googleLogin ? '' : 'primary big'}
+        disabled={busy || !email || password.length < (mode === 'signup' ? MIN_PASSWORD_LENGTH : 1)}
+      >
+        {mode === 'signin' ? 'Sign in' : 'Create account'}
+      </button>
+    </form>
+
+    <p class="switch">
+      {mode === 'signin' ? 'New here?' : 'Already have an account?'}
+      <button type="button" class="link" onclick={switchMode}>
+        {mode === 'signin' ? 'Create an account' : 'Sign in'}
+      </button>
+    </p>
+    <p class="muted hint">Use the same email and password on your phone and your computer.</p>
 
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   </section>
@@ -157,6 +182,14 @@
     content: '';
     flex: 1;
     border-top: 1px solid var(--border);
+  }
+  .switch,
+  .hint {
+    margin: 0;
+    text-align: center;
+  }
+  .hint {
+    font-size: 0.9rem;
   }
   footer {
     justify-content: center;

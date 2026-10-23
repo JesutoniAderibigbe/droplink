@@ -2,6 +2,13 @@
 // messages a person can act on. Never include file contents or tokens.
 
 const known: [RegExp, string][] = [
+  [/Invalid login credentials/i, 'Wrong email or password.'],
+  [
+    /User already registered|account_exists_or_unconfirmed/i,
+    'That email already has an account. Sign in instead.',
+  ],
+  [/Password should be at least|weak_password/i, 'Use a longer password (at least 8 characters).'],
+  [/Unable to validate email|invalid format/i, 'That email address looks wrong.'],
   [/rate_limited/i, 'You have sent a lot of files recently. Please wait a bit and try again.'],
   [
     /quota_exceeded/i,

@@ -179,3 +179,14 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
   Functions use bearer tokens (no cookies), so this is defence in depth, not the main protection.
 - **`docs/PROTOCOL.md`** documents identity, signaling, the data-channel protocol, push and the relay
   format, so a native client can be added against the same schema.
+
+## Sign-in (after launch)
+
+- **Email + password, no emails at all.** Magic links and codes depend on email delivery, which the
+  free Supabase plan limits to a couple of emails an hour (and custom templates need your own SMTP).
+  Email confirmation is off, so sign-up returns a session straight away. The trade-off: anyone can
+  register an address they don't own. That's acceptable here because every account only ever sees its
+  own data. Minimum password length is 8.
+- **Google is hidden until configured** (`VITE_ENABLE_GOOGLE_LOGIN=true`), so the button never leads
+  to a "provider not enabled" error.
+- There's no password reset yet: it would need email delivery.

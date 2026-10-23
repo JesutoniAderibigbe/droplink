@@ -79,7 +79,7 @@ npm run functions:serve           # terminal 1: Edge Functions
 npm run dev                       # terminal 2: https://localhost:5173 and https://<LAN-IP>:5173
 ```
 
-Sign in with an email: the code and link arrive in **Mailpit** at http://127.0.0.1:55324.
+Create an account with any email and a password (8+ characters). No email is sent: confirmation is off.
 
 Local ports are 553xx instead of Supabase's 543xx defaults (another project here used those):
 API 55321, DB 55322, Studio 55323, Mailpit 55324.
@@ -124,14 +124,12 @@ service worker (needed for install, share target and push) over a self-signed ce
    to local Supabase, so the phone only needs the one HTTPS origin. (Alternatively put
    `http://<LAN-IP>:55321` in `VITE_SUPABASE_URL`, but then an HTTPS page calls HTTP, which is mixed
    content and gets blocked.)
-4. **Sign in with the email code** on the phone. Local magic links point at `127.0.0.1`, which is
-   the phone itself. LAN redirect URLs (`https://192.168.*.*:5173/**`, `10.*`, `172.*`) are already
-   allowed in `supabase/config.toml`.
+4. **Sign in with email + password.** Nothing is emailed, so it works the same on the phone.
 5. **Google OAuth locally** (optional): set `[auth.external.google] enabled = true` in
    `supabase/config.toml`, export `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `_SECRET`, add
    `http://127.0.0.1:55321/auth/v1/callback` as an authorized redirect URI in Google Cloud, and
    `supabase stop && supabase start`. The callback goes to `127.0.0.1`, so Google sign-in only works on
-   the laptop. Use email codes on the phone, or test Google on the deployed site.
+   the laptop. Use email + password on the phone, or test Google on the deployed site.
 6. Install: Chrome menu → **Install app** (or the in-app Install button). The share target only
    appears once installed.
 
@@ -169,10 +167,9 @@ service worker (needed for install, share target and push) over a self-signed ce
    `https://<your-site>.netlify.app/**`.
 7. **Auth → Providers → Google:** enable it, with a Google Cloud OAuth client whose authorized
    redirect URI is `https://<ref>.supabase.co/auth/v1/callback`.
-8. **Auth → Email Templates → Magic Link:** include `{{ .Token }}` so emails carry the 6-digit code
-   as well as the link (copy `supabase/templates/magic_link.html`, or `supabase config push`). Set up
-   **custom SMTP** (Auth → SMTP): the built-in sender is heavily rate-limited and isn't meant for a
-   public app.
+8. **Auth → Sign In / Providers → Email:** keep it enabled with **Confirm email off**. DropLink signs in
+   with email + password and never sends email. To add Google later, enable the Google provider and set
+   `VITE_ENABLE_GOOGLE_LOGIN=true` in the GitHub variables, so the button appears.
 
 ### 2. Netlify
 
@@ -216,7 +213,6 @@ service worker (needed for install, share target and push) over a self-signed ce
 | Symptom                                                          | Fix                                                                                                                                                                                          |
 | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Service worker doesn't register on the phone / no Install option | The certificate isn't trusted. Use mkcert and install its root CA on the phone.                                                                                                              |
-| Phone sign-in link opens `127.0.0.1`                             | Expected locally. Type the 6-digit code from the email instead.                                                                                                                              |
 | "Too many attempts" on sign-in                                   | Supabase rate limits; wait a minute. Locally they're raised in `config.toml`.                                                                                                                |
 | Devices never show as online                                     | Check that both are signed in to the same account and that `/realtime/v1` is reachable (Network tab, WS). A private channel `CHANNEL_ERROR` means a wrong or expired session. Sign in again. |
 | Transfers stay on "Connecting…" then relay                       | No direct path between the networks. Configure Cloudflare TURN secrets, and check `turn-credentials` returns `turn: true`.                                                                   |

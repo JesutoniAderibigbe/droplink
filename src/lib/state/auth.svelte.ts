@@ -30,17 +30,22 @@ export async function signInWithGoogle(): Promise<void> {
   if (error) throw error;
 }
 
-export async function sendMagicLink(email: string): Promise<void> {
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: redirectUrl() },
-  });
+export const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * Email + password. Email confirmation is off in Supabase, so sign-up returns a
+ * session straight away and no email is ever sent.
+ */
+export async function signUpWithPassword(email: string, password: string): Promise<void> {
+  const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) throw error;
+  // With confirmations off a brand-new user gets a session. An existing email
+  // gets no session (Supabase hides whether it exists), so say so plainly.
+  if (!data.session) throw new Error('account_exists_or_unconfirmed');
 }
 
-/** Verify the 6-digit code from the email (works inside installed PWAs too). */
-export async function verifyEmailCode(email: string, token: string): Promise<void> {
-  const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+export async function signInWithPassword(email: string, password: string): Promise<void> {
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
 }
 
