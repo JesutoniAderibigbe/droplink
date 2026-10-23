@@ -3,9 +3,13 @@
   import { router } from '../lib/state/router.svelte';
   import { session, startSession } from '../lib/state/session.svelte';
   import '../lib/state/presence.svelte';
+  import '../lib/state/transfers.svelte';
+  import '../lib/state/settings.svelte';
   import AppHeader from '../components/AppHeader.svelte';
   import Home from './Home.svelte';
   import Settings from './Settings.svelte';
+  import Send from './Send.svelte';
+  import Receive from './Receive.svelte';
 
   $effect(() => {
     const id = auth.session?.user.id;
@@ -29,6 +33,10 @@
   <Home />
 {:else if router.route === 'settings'}
   <Settings />
+{:else if router.route === 'send'}
+  <Send />
+{:else if router.route === 'receive'}
+  <Receive />
 {:else}
   <main class="container stack">
     <h1>Page not found</h1>

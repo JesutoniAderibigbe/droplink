@@ -55,3 +55,26 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
 - **Testing gotcha:** a supabase-js client without an auth session pushes the anon key to Realtime
   right after joining, and Realtime then closes the private channel. The app is unaffected (its
   client holds the session). The Node tests use the `accessToken` client option.
+
+## WebRTC transfer engine
+
+- **Protocol additions beyond the spec:** `file-meta` also carries `index`/`total` ("file 2 of 5");
+  `ack` carries `chunk` (chunks written to disk = resume point) and `done`; there's a `bye` message
+  (all done, or `cancelled`). Binary header = version byte + 16-byte file UUID + uint32 chunk index
+  (21 bytes) + up to 64 KB payload.
+- **Two flow-control limits, not one.** Besides `bufferedAmount` backpressure (pause above 8 MB,
+  resume on `bufferedamountlow` at 1 MB), the sender keeps at most 16 MB unacknowledged. The receiver
+  acks only after writing to disk, so a slow disk can't make the receiver buffer the whole file in memory.
+- **Resume, not restart, after a drop.** The receiver session outlives connection attempts. After a
+  reconnect (new offer, `attempt + 1`, backoff 1-16 s, 5 tries) the sender re-sends `file-meta`
+  for the current file and the receiver replies with the chunk count it has on disk. Files finished
+  before the drop are confirmed with `ack { done: true }` and skipped. The receiver keeps a partial
+  file for 90 s waiting for the sender to come back.
+- **Disk reads are 1 MB blocks** split into 64 KB messages, with the next block read while the
+  current one sends.
+- **Dev checksum uses a small pure-TS incremental SHA-256** (`core/sha256.ts`), because WebCrypto
+  `digest()` needs the whole input in memory. It's a dev-build integrity check only and never used for
+  security. All real cryptography uses WebCrypto.
+- **Measured (local, two Chromium contexts, dev build with checksums on both sides):** 1 GB in 58 s,
+  peak JS heap + ArrayBuffer memory 49 MB on the sender and 41 MB on the receiver. Hashing dominates
+  the time; production builds don't hash.
