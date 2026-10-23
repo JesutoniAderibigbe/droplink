@@ -8,6 +8,9 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  # These three are public by design (bundled into the app). Exempt only them
+  # from Netlify's secrets scanner, never the scanner as a whole.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY,VITE_VAPID_PUBLIC_KEY"
 
 # Single-page app: every path (/, /send, /receive?transfer=…) serves the shell.
 # /share-target is handled by the service worker, which is installed before
