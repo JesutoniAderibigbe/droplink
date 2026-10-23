@@ -2,7 +2,7 @@ export interface Toast {
   id: number;
   text: string;
   kind: 'info' | 'ok' | 'error';
-  action?: { label: string; href: string };
+  action?: { label: string; href?: string; onClick?: () => void };
 }
 
 export const toasts = $state<{ list: Toast[] }>({ list: [] });

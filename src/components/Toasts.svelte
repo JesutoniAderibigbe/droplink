@@ -6,7 +6,13 @@
   {#each toasts.list as t (t.id)}
     <div class="toast {t.kind}">
       <span class="grow">{t.text}</span>
-      {#if t.action}<a href={t.action.href} onclick={() => dismiss(t.id)}>{t.action.label}</a>{/if}
+      {#if t.action?.href}
+        <a href={t.action.href} onclick={() => dismiss(t.id)}>{t.action.label}</a>
+      {:else if t.action?.onClick}
+        <button class="act" onclick={() => (dismiss(t.id), t.action?.onClick?.())}
+          >{t.action.label}</button
+        >
+      {/if}
       <button class="icon close" aria-label="Dismiss" onclick={() => dismiss(t.id)}>✕</button>
     </div>
   {/each}
@@ -40,6 +46,14 @@
   .toast a {
     color: inherit;
     font-weight: 600;
+  }
+  .act {
+    min-height: 36px;
+    padding: 0 0.6rem;
+    background: transparent;
+    border: none;
+    color: inherit;
+    text-decoration: underline;
   }
   .toast.error {
     background: var(--danger);
