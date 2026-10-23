@@ -11,10 +11,6 @@
   # These three are public by design (bundled into the app). Exempt only them
   # from Netlify's secrets scanner, never the scanner as a whole.
   SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY,VITE_VAPID_PUBLIC_KEY"
-  # Smart detection matches key-shaped strings regardless of variable name.
-  # These exact values are the public Supabase publishable key and the public
-  # VAPID key (both shipped to every browser).
-  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "sb_publishable_Xccmhe4rBfSsQr4VvWFeBA_SKuRy3-z,BFvqV0x8pUXqMKCoErIzPSsetZa1JrGRw2j8-jjyFLmUN_90Uh6N_w9tzshWPhvlXHL29PSX7V9ynWNwsB-yxII"
 
 # Single-page app: every path (/, /send, /receive?transfer=…) serves the shell.
 # /share-target is handled by the service worker, which is installed before
