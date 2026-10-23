@@ -14,3 +14,31 @@ Ambiguous choices made while building DropLink, with the reasoning. Newest at th
 - **HTTPS in dev:** uses mkcert certificates from `./certs` if present, otherwise
   `@vitejs/plugin-basic-ssl` (self-signed). Self-signed is fine on the laptop, but Android Chrome will
   not register a service worker over an untrusted certificate, so phone testing needs mkcert.
+
+## Schema, RLS, quotas
+
+- **Extra columns beyond the spec:** `transfers.relay_params` (ephemeral public key, HKDF salt, IV
+  prefix), `transfers.relay_started_at` (for the hourly relay limit), `relay_objects.user_id`
+  (simple RLS) and `relay_objects.file_index` (-1 = manifest).
+- **Column-level grants.** Clients can update only `devices(name, last_seen_at, revoked_at)`,
+  `transfers(status, delivered_at, relay_params)` and `profiles(display_name)`. Ownership, keys,
+  expiry and usage counters can't be changed from the client at all.
+- **Revoke instead of delete.** Removing a device sets `revoked_at` (permanent; a trigger blocks
+  un-revoking) and a trigger deletes its push subscriptions. Rows are hard-deleted only with the account.
+- **Transfer state machine in a trigger.** `pending → p2p | relayed | delivered | failed | cancelled`,
+  `p2p → pending | delivered | failed | cancelled`, `relayed → delivered | failed | cancelled`.
+  `expired` is set only by the service role (cleanup job).
+- **How quotas can't be bypassed.** Clients upload straight to Storage, so the bucket's INSERT policy
+  requires each object path to be pre-registered in `relay_objects`, and the quota trigger runs on that
+  insert. The bucket caps each object at 1 MiB + 1 KiB. Someone could register a small `byte_size` and
+  upload a bigger object, but a transfer can only move to `relayed` (and so become downloadable) once a
+  trigger confirms every object exists with `size <= byte_size`. Mismatched uploads are never delivered
+  and get deleted by cleanup.
+- **"20 transfers per hour" applies to relayed transfers**, as listed under the relay limits. P2P
+  transfers only count toward a looser 200 rows/hour cap that stops table spam, since direct sends cost
+  the server nothing.
+- **Quota errors use SQLSTATE `PT429`/`PT413`**, so PostgREST returns HTTP 429/413, and messages
+  start with `rate_limited:`, `quota_exceeded:` or `too_large:` so the client can show a human message.
+- **Email sign-in sends both a link and a 6-digit code** (custom template). The code lets an installed
+  PWA sign in without the link opening in a separate browser, and lets a phone sign in against local
+  Supabase, whose links point at `127.0.0.1`.

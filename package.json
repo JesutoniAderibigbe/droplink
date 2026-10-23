@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "test:rls": "vitest run --config vitest.rls.config.ts",
     "test:e2e": "playwright test",
-    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tests && tsc -p tsconfig.node.json",
     "lint": "eslint . && prettier --check . && npm run check",
     "format": "prettier --write .",
     "icons": "node scripts/gen-icons.mjs",
