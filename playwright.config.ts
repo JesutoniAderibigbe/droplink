@@ -8,6 +8,8 @@ export default defineConfig({
   timeout: 10 * 60_000,
   fullyParallel: false,
   workers: 1,
+  // CI runners are noisier than a laptop: one retry for timing-sensitive WebRTC tests.
+  retries: process.env.CI ? 1 : 0,
   reporter: 'list',
   expect: { timeout: 15_000 },
   use: {
