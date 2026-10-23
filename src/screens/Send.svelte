@@ -5,6 +5,9 @@
   import { isOnline } from '../lib/state/presence.svelte';
   import { transfers, sendFiles, toSendFiles } from '../lib/state/transfers.svelte';
   import { settings, preferredTarget, updateSettings } from '../lib/state/settings.svelte';
+  import { router, navigate } from '../lib/state/router.svelte';
+  import { listEntries, removeEntry } from '../lib/services/outbox';
+  import { TEXT_ITEM_MIME } from '../lib/config';
   import DevicePicker from '../components/DevicePicker.svelte';
   import OutgoingCard from '../components/OutgoingCard.svelte';
 
@@ -23,6 +26,41 @@
 
   const totalBytes = $derived(files.reduce((s, f) => s + f.size, 0));
 
+  // Files shared from another app arrive through the service worker's outbox.
+  let sharedEntryIds: string[] = [];
+  let shareError = $state(router.query.get('shared') === 'error');
+  let autoSent = $state(false);
+  const textPreviews = $state<Record<string, string>>({});
+
+  $effect(() => {
+    if (router.query.get('shared') !== '1') return;
+    void listEntries('shared').then(async (entries) => {
+      sharedEntryIds = entries.map((e) => e.id);
+      const incoming = entries.flatMap((e) => e.files);
+      for (const f of incoming) {
+        if (f.mimeType === TEXT_ITEM_MIME) textPreviews[f.id] = (await f.blob.text()).slice(0, 300);
+      }
+      files = [...files.filter((f) => !incoming.some((i) => i.id === f.id)), ...incoming];
+    });
+  });
+
+  // One-tap flow: "Send to my default device without asking".
+  $effect(() => {
+    if (
+      autoSent ||
+      !settings.loaded ||
+      !settings.autoSend ||
+      files.length === 0 ||
+      sharedEntryIds.length === 0
+    )
+      return;
+    const preferred = preferredTarget(devices.map((d) => d.id));
+    if (!preferred) return;
+    autoSent = true;
+    target = preferred;
+    send();
+  });
+
   function addFiles(list: FileList | null | undefined) {
     if (!list?.length) return;
     files = [...files, ...toSendFiles(list)];
@@ -37,6 +75,10 @@
     sendFiles(target, files);
     void updateSettings({ lastTargetId: target });
     files = [];
+    // The engine holds the files now (and re-persists them if it has to wait).
+    for (const id of sharedEntryIds) void removeEntry(id);
+    sharedEntryIds = [];
+    if (router.query.has('shared')) navigate('/send', { replace: true });
   }
 
   function onDrop(e: DragEvent) {
@@ -59,6 +101,12 @@
 
 <main class="container stack">
   <h1>Send</h1>
+
+  {#if shareError}
+    <p class="card warn" role="alert">
+      Those shared files couldn't be read. Try sharing them again, or pick them here.
+    </p>
+  {/if}
 
   <section class="card stack" aria-labelledby="files-title">
     <div class="row spread">
@@ -91,8 +139,12 @@
       <ul class="list" aria-label="Selected files">
         {#each files as f (f.id)}
           <li class="row">
-            <span class="grow ellipsis">{f.name}</span>
-            <small class="muted">{formatBytes(f.size)}</small>
+            {#if f.mimeType === TEXT_ITEM_MIME}
+              <span class="grow ellipsis"><strong>Text:</strong> {textPreviews[f.id] ?? ''}</span>
+            {:else}
+              <span class="grow ellipsis">{f.name}</span>
+              <small class="muted">{formatBytes(f.size)}</small>
+            {/if}
             <button class="icon" aria-label="Remove {f.name}" onclick={() => remove(f.id)}>✕</button
             >
           </li>

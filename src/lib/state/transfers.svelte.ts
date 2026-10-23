@@ -3,6 +3,7 @@
 import { get, set } from 'idb-keyval';
 import type { SendFile } from '../core/sink';
 import { keys, kvStore } from '../services/kv';
+import * as outbox from '../services/outbox';
 import { cleanupTempFiles, defaultSinkFactory } from '../services/sinks';
 import {
   TransferEngine,
@@ -87,6 +88,7 @@ onSessionReady(({ userId, device }) => {
     },
     onOutgoing: (v) => {
       transfers.outgoing = upsert(transfers.outgoing, v);
+      void persistOutbox(v);
     },
     onIncoming: (v) => {
       transfers.incoming = upsert(transfers.incoming, v);
@@ -110,6 +112,7 @@ onSessionReady(({ userId, device }) => {
     },
   });
   engine = e;
+  void resumePending(e);
   if (import.meta.env.DEV) {
     // Dev/test hook: simulate a network drop on every active connection.
     (window as unknown as { __droplink: object }).__droplink = {
@@ -124,6 +127,53 @@ onSessionReady(({ userId, device }) => {
     transfers.received = [];
   };
 });
+
+// --- Outbox: survive reloads while waiting for an offline device ------------
+
+const persisted = new Set<string>();
+const TERMINAL = new Set(['delivered', 'relayed', 'partial', 'failed', 'cancelled']);
+
+async function persistOutbox(v: OutgoingView): Promise<void> {
+  const key = `pending:${v.id}`;
+  if (v.phase === 'queued' && !persisted.has(v.id)) {
+    persisted.add(v.id);
+    const t = engine?.getOutgoing(v.id);
+    if (!t) return;
+    const files = t.queue.remaining.map((i) => t.files.get(i.id)!);
+    try {
+      await outbox.putEntry({
+        id: key,
+        kind: 'pending',
+        createdAt: Date.now(),
+        targetId: v.targetId,
+        files: files.map((f) => ({
+          id: f.id,
+          name: f.name,
+          mimeType: f.mimeType,
+          size: f.size,
+          lastModified: f.lastModified,
+          blob: f.blob,
+        })),
+      });
+    } catch (e) {
+      // Usually out of quota for very large files: it still sends while the app stays open.
+      console.warn('[outbox] could not persist pending send', (e as Error).name);
+    }
+  } else if (TERMINAL.has(v.phase) && persisted.has(v.id)) {
+    persisted.delete(v.id);
+    await outbox.removeEntry(key);
+  }
+}
+
+/** Re-start sends that were waiting for an offline device when the app closed. */
+async function resumePending(e: TransferEngine): Promise<void> {
+  for (const entry of await outbox.listEntries('pending')) {
+    const target = entry.targetId ? deviceById(entry.targetId) : undefined;
+    await outbox.removeEntry(entry.id);
+    if (!target || entry.files.length === 0) continue;
+    e.send(target, entry.files);
+  }
+}
 
 export function sendFiles(targetId: string, files: SendFile[]): string | null {
   const target = deviceById(targetId);

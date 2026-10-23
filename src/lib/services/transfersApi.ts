@@ -31,11 +31,21 @@ export async function setTransferStatus(id: string, status: TransferStatus): Pro
   if (error) throw error;
 }
 
+// Status writes for one transfer are chained so they reach the database in
+// the order they were made (a fast transfer can otherwise send "delivered"
+// before "p2p", which the server's state machine rightly rejects).
+const statusChains = new Map<string, Promise<void>>();
+
 /** Best effort: status is bookkeeping, never a reason to fail a transfer. */
-export function trySetStatus(id: string, status: TransferStatus): void {
-  setTransferStatus(id, status).catch((e) =>
-    console.warn('[transfers] status update failed', status, e?.message),
-  );
+export function trySetStatus(id: string, status: TransferStatus): Promise<void> {
+  const next = (statusChains.get(id) ?? Promise.resolve())
+    .then(() => setTransferStatus(id, status))
+    .catch((e) => console.warn('[transfers] status update failed', status, e?.message));
+  statusChains.set(id, next);
+  void next.then(() => {
+    if (statusChains.get(id) === next) statusChains.delete(id);
+  });
+  return next;
 }
 
 export async function startRelay(id: string, params: RelayParams): Promise<void> {

@@ -4,6 +4,10 @@
   import { humanError } from '../lib/core/errors';
   import { timeAgo } from '../lib/core/format';
   import DeviceIcon from '../components/DeviceIcon.svelte';
+  import { settings, updateSettings } from '../lib/state/settings.svelte';
+  import { otherDevices } from '../lib/state/session.svelte';
+
+  const others = $derived(otherDevices());
 
   let thisName = $state(session.device?.name ?? '');
   let editing = $state<string | null>(null);
@@ -49,6 +53,36 @@
         >Save</button
       >
     </form>
+  </section>
+
+  <section class="card stack" aria-labelledby="sending-title">
+    <h2 id="sending-title">Sending</h2>
+    <div class="field">
+      <label for="default-target">Default device</label>
+      <select
+        id="default-target"
+        value={settings.defaultTargetId ?? ''}
+        onchange={(e) => updateSettings({ defaultTargetId: e.currentTarget.value || null })}
+      >
+        <option value="">Most recently used</option>
+        {#each others as d (d.id)}
+          <option value={d.id}>{d.name}</option>
+        {/each}
+      </select>
+    </div>
+    <label class="check">
+      <input
+        type="checkbox"
+        checked={settings.autoSend}
+        onchange={(e) => updateSettings({ autoSend: e.currentTarget.checked })}
+      />
+      <span>
+        Send to my default device without asking
+        <small class="muted block"
+          >When you share to DropLink from another app, it sends right away.</small
+        >
+      </span>
+    </label>
   </section>
 
   <section class="card stack" aria-labelledby="manage-title">
@@ -112,6 +146,22 @@
 </main>
 
 <style>
+  .check {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .check input {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-top: 0.15rem;
+    accent-color: var(--accent);
+  }
+  .block {
+    display: block;
+  }
   .device {
     gap: 0.5rem;
   }

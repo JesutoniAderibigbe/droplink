@@ -1,6 +1,12 @@
 <script lang="ts">
   import { sendMagicLink, signInWithGoogle, verifyEmailCode } from '../lib/state/auth.svelte';
   import { humanError } from '../lib/core/errors';
+  import { listEntries } from '../lib/services/outbox';
+  import { consumeRevokedNotice } from '../lib/state/session.svelte';
+
+  const revoked = consumeRevokedNotice();
+  let sharedCount = $state(0);
+  void listEntries('shared').then((e) => (sharedCount = e.reduce((n, x) => n + x.files.length, 0)));
 
   let email = $state('');
   let code = $state('');
@@ -50,6 +56,18 @@
       or an end-to-end encrypted copy waits for it for up to 24 hours.
     </li>
   </ul>
+
+  {#if revoked}
+    <p class="card warn" role="status">
+      This device was removed from your account, so it was signed out.
+    </p>
+  {/if}
+  {#if sharedCount > 0}
+    <p class="card soft" role="status">
+      Sign in to send the {sharedCount === 1 ? 'item' : `${sharedCount} items`} you shared. They'll be
+      waiting.
+    </p>
+  {/if}
 
   <section class="card stack" aria-labelledby="signin-title">
     <h2 id="signin-title">Sign in</h2>

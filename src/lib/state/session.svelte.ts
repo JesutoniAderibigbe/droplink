@@ -157,8 +157,10 @@ async function heartbeat(): Promise<void> {
   try {
     await devicesApi.touchLastSeen(id);
   } catch (e) {
-    if (/revoked/i.test(String((e as Error)?.message)) && session.userId)
-      await handleRevoked(session.userId);
+    // Exactly the error raised by the devices_before_update trigger; anything
+    // else (expired token after sleep, network) is not a revocation.
+    const message = (e as { message?: string } | null)?.message;
+    if (message === 'device is revoked' && session.userId) await handleRevoked(session.userId);
   }
 }
 

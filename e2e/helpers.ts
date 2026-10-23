@@ -2,12 +2,17 @@ import { expect, type Browser, type Page } from '@playwright/test';
 
 const MAILPIT = process.env.MAILPIT_URL ?? 'http://127.0.0.1:55324';
 
-async function latestCode(email: string, after: number): Promise<string> {
-  for (let i = 0; i < 40; i++) {
+// Message ids already used, so a second sign-in with the same address picks
+// the new email. (Comparing timestamps is fragile: Docker's clock can drift.)
+const usedMessages = new Set<string>();
+
+async function latestCode(email: string): Promise<string> {
+  for (let i = 0; i < 60; i++) {
     const res = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`);
-    const { messages } = (await res.json()) as { messages: { ID: string; Created: string }[] };
-    const fresh = messages.find((m) => new Date(m.Created).getTime() >= after - 2000);
+    const { messages } = (await res.json()) as { messages: { ID: string }[] };
+    const fresh = messages.find((m) => !usedMessages.has(m.ID)); // newest first
     if (fresh) {
+      usedMessages.add(fresh.ID);
       const msg = (await (await fetch(`${MAILPIT}/api/v1/message/${fresh.ID}`)).json()) as {
         Text: string;
       };
@@ -22,8 +27,15 @@ async function latestCode(email: string, after: number): Promise<string> {
 /** Sign in through the real UI using the emailed 6-digit code. */
 export async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/');
+  await signInHere(page, email);
+  await expect(page.getByText('This device', { exact: true }).first()).toBeVisible({
+    timeout: 20_000,
+  });
+}
+
+/** Same, on whatever page is showing the sign-in form. */
+export async function signInHere(page: Page, email: string): Promise<void> {
   await page.getByLabel('Email').fill(email);
-  let sentAt = Date.now();
   await page.getByRole('button', { name: 'Email me a sign-in link' }).click();
   // Supabase allows one email per address per second; retry if we hit it.
   const codeField = page.getByLabel('Code');
@@ -32,15 +44,12 @@ export async function signIn(page: Page, email: string): Promise<void> {
     await expect(codeField.or(tooMany)).toBeVisible();
     if (!(await tooMany.isVisible())) break;
     await page.waitForTimeout(1500);
-    sentAt = Date.now();
     await page.getByRole('button', { name: 'Email me a sign-in link' }).click();
   }
-  const code = await latestCode(email, sentAt);
+  const code = await latestCode(email);
   await codeField.fill(code);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByText('This device', { exact: true }).first()).toBeVisible({
-    timeout: 20_000,
-  });
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible({ timeout: 20_000 });
 }
 
 /** A fresh browser context is a fresh "device" (own IndexedDB and keys). */

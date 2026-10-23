@@ -92,3 +92,21 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
   close, so partial files never appear under their real name. Cancelled or failed files are removed.
 - **Auto-open Receive** when a transfer arrives while on Home; elsewhere, a toast with a "View" link.
   System notifications (via the SW registration) only when the page is hidden.
+
+## PWA and share target
+
+- **Installability is verified with Chrome's own check** (`Page.getInstallabilityErrors` via CDP,
+  in `e2e/pwa.spec.ts`), because Lighthouse 12 removed the PWA category. It's the same criteria
+  Chrome uses to offer installation.
+- **The share target stores files in the IndexedDB outbox and redirects to `/send?shared=1`**, which
+  reads every unsent "shared" entry. Shared title/text/URL become one text item (deduplicated, max
+  64 KB) with the marker MIME type `application/x-droplink-text`. The receiver shows it with Copy
+  (and Open link for a bare URL) instead of saving a file.
+- **Signed out while sharing:** the entries stay in the outbox, the sign-in page says items are
+  waiting, and signing in with the email code keeps you on `/send?shared=1`.
+- **Parked sends persist.** When a send is waiting for an offline device and can't use the relay,
+  its files are copied into the outbox and resumed (as a new transfer) the next time the app opens.
+  The old row expires through cleanup.
+- **Status writes are serialized per transfer**, so a fast transfer can't write `delivered` before `p2p`.
+- **Tests and sleep:** long e2e runs use `caffeinate -i`. A Mac sleeping mid-test breaks WebRTC and
+  Realtime and shows up as baffling timeouts.

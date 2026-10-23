@@ -17,7 +17,10 @@ export default defineConfig({
     launchOptions: {
       // Use real host candidates instead of mDNS names so two contexts on one
       // machine can connect without a STUN round trip.
-      args: ['--disable-features=WebRtcHideLocalIpsWithMdns'],
+      // --ignore-certificate-errors: the dev/preview servers use a self-signed
+      // certificate, and Chrome won't register a service worker over one even
+      // with ignoreHTTPSErrors. (Real phones need mkcert, see README.)
+      args: ['--disable-features=WebRtcHideLocalIpsWithMdns', '--ignore-certificate-errors'],
     },
   },
 });
