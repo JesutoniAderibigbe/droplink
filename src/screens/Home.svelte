@@ -9,6 +9,7 @@
   import DeviceIcon from '../components/DeviceIcon.svelte';
   import FolderCard from '../components/FolderCard.svelte';
   import InstallCard from '../components/InstallCard.svelte';
+  import PushCard from '../components/PushCard.svelte';
   import OutgoingCard from '../components/OutgoingCard.svelte';
 
   // Online devices first, then most recently seen.
@@ -76,6 +77,7 @@
     />
   </section>
 
+  <PushCard />
   <FolderCard />
   <InstallCard />
 

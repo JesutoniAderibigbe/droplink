@@ -19,7 +19,8 @@
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
-    "functions:serve": "supabase functions serve --env-file supabase/functions/.env"
+    "functions:serve": "supabase functions serve --env-file supabase/functions/.env",
+    "test:push": "bash scripts/test-push-local.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

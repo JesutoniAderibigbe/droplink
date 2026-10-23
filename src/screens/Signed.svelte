@@ -6,6 +6,7 @@
   import '../lib/state/transfers.svelte';
   import '../lib/state/settings.svelte';
   import '../lib/state/arrivals.svelte';
+  import '../lib/state/push.svelte';
   import Toasts from '../components/Toasts.svelte';
   import AppHeader from '../components/AppHeader.svelte';
   import Home from './Home.svelte';

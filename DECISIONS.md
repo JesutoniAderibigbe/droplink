@@ -110,3 +110,21 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
 - **Status writes are serialized per transfer**, so a fast transfer can't write `delivered` before `p2p`.
 - **Tests and sleep:** long e2e runs use `caffeinate -i`. A Mac sleeping mid-test breaks WebRTC and
   Realtime and shows up as baffling timeouts.
+
+## Web Push
+
+- **`VAPID_PUBLIC_KEY` is also a function secret.** `web-push` needs both halves to sign, so the
+  public key appears in both Vite env and Supabase secrets.
+- **One push per transfer, enforced in Postgres.** `notify-device` must first claim the transfer via
+  `claim_transfer_notification()` (pending, the caller's own, under 10 minutes old, not yet notified),
+  so the function can't be used to spam a device. The payload (sender name, count, size) is read
+  from the database, not taken from the request.
+- **`save_push_subscription()` RPC** moves an endpoint to the newest device row (an endpoint
+  identifies a browser profile) and keeps at most 5 subscriptions per device.
+- **Push TTL is 120 s.** Past that, the relay has taken over, so a late notification is just noise.
+- **Notification click with an open window:** the SW focuses it and posts `open-transfer`; the page
+  navigates to `/receive?transfer=<id>`, which sends `transfer-accept` to the waiting sender.
+- **Testing:** `npm run test:push` runs `notify-device` against a mock HTTPS push service and
+  decrypts the RFC 8291 payload. That proves `npm:web-push` works in the Supabase edge runtime. The SW
+  push handler is tested with CDP `ServiceWorker.deliverPushMessage`. Real delivery through
+  FCM/APNs/Mozilla, and clicking the notification, are in the manual checklist.

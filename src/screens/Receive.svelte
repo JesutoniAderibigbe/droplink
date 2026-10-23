@@ -3,6 +3,23 @@
   import { formatBytes, timeAgo } from '../lib/core/format';
   import IncomingCard from '../components/IncomingCard.svelte';
   import FolderCard from '../components/FolderCard.svelte';
+  import { router } from '../lib/state/router.svelte';
+  import { getEngine } from '../lib/state/transfers.svelte';
+  import { presence } from '../lib/state/presence.svelte';
+
+  // Opened from a push notification (/receive?transfer=<id>): tell the waiting
+  // sender we're here, as soon as we're connected to signaling.
+  // Deliberately not reactive: only dedupes announcements.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
+  const announced = new Set<string>();
+  $effect(() => {
+    const id = router.query.get('transfer');
+    if (!id || presence.status !== 'connected' || announced.has(id)) return;
+    announced.add(id);
+    getEngine()
+      .announceReady(id)
+      .catch((e) => console.warn('[receive] announce failed', (e as Error)?.message));
+  });
 
   let copied = $state<string | null>(null);
   async function copy(id: string, text: string) {
