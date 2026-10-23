@@ -3,7 +3,7 @@
 #   every push / PR:  checks ─┬─ db-tests ─┬─ (main only) deploy
 #                             └─ e2e ──────┘
 #
-# deploy runs only on pushes to main, after every test job passes, in this
+# deploy runs only on main (pushes, or a manual run), after every test job passes, in this
 # order: database migrations → Edge Functions → build → Netlify → smoke test.
 # GitHub builds the site and uploads dist/ (Netlify doesn't build), so build
 # logs live here.
@@ -96,7 +96,8 @@ jobs:
 
   deploy:
     name: Deploy to production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Pushes to main, or a manual "Run workflow" on main.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [db-tests, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 20
