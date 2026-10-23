@@ -12,3 +12,4 @@ supabase/.branches
 supabase/functions/.env
 test-results
 playwright-report
+.secrets/
