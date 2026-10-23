@@ -78,3 +78,17 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
 - **Measured (local, two Chromium contexts, dev build with checksums on both sides):** 1 GB in 58 s,
   peak JS heap + ArrayBuffer memory 49 MB on the sender and 41 MB on the receiver. Hashing dominates
   the time; production builds don't hash.
+
+## Desktop receiving
+
+- **Sink order:** chosen folder (if permission is `granted` right now) → OPFS temp file + normal
+  download → in-memory Blob + download. OPFS is used even without a folder, so a big file never has
+  to fit in memory, and the browser download is handed a disk-backed `File`.
+- **No permission prompt mid-transfer.** `requestPermission()` needs a user click, and transfers
+  that start from a push notification have none. So if the stored folder needs re-approval we save
+  through the download fallback and show a one-click "Allow access to <folder>" button. Chrome's
+  "Allow on every visit" option removes even that click.
+- **Folder writes use `createWritable()`**, which writes to a `.crswap` temp file and swaps it in on
+  close, so partial files never appear under their real name. Cancelled or failed files are removed.
+- **Auto-open Receive** when a transfer arrives while on Home; elsewhere, a toast with a "View" link.
+  System notifications (via the SW registration) only when the page is hidden.

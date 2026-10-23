@@ -5,6 +5,8 @@
   import '../lib/state/presence.svelte';
   import '../lib/state/transfers.svelte';
   import '../lib/state/settings.svelte';
+  import '../lib/state/arrivals.svelte';
+  import Toasts from '../components/Toasts.svelte';
   import AppHeader from '../components/AppHeader.svelte';
   import Home from './Home.svelte';
   import Settings from './Settings.svelte';
@@ -18,6 +20,7 @@
 </script>
 
 <AppHeader />
+<Toasts />
 
 {#if session.phase === 'error'}
   <main class="container stack">
