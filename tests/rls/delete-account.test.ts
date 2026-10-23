@@ -46,16 +46,14 @@ describe('delete-account', () => {
     const t = await addTransfer(a, p, m, 100);
     await a.client.from('transfers').update({ relay_params: relayParams }).eq('id', t);
     const path = `${a.id}/${t}/0/0`;
-    await a.client
-      .from('relay_objects')
-      .insert({
-        transfer_id: t,
-        user_id: a.id,
-        storage_path: path,
-        file_index: 0,
-        chunk_index: 0,
-        byte_size: 116,
-      });
+    await a.client.from('relay_objects').insert({
+      transfer_id: t,
+      user_id: a.id,
+      storage_path: path,
+      file_index: 0,
+      chunk_index: 0,
+      byte_size: 116,
+    });
     const up = await a.client.storage
       .from('relay')
       .upload(path, new Blob([new Uint8Array(116)]), { contentType: 'application/octet-stream' });

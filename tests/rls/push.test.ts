@@ -34,19 +34,27 @@ async function hkdf(
   ikm: Uint8Array,
   info: Uint8Array,
   bytes: number,
-): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+): Promise<Uint8Array<ArrayBuffer>> {
+  // Copy into ArrayBuffer-backed arrays (Node Buffers may share a pooled buffer).
+  const key = await crypto.subtle.importKey('raw', new Uint8Array(ikm), 'HKDF', false, [
+    'deriveBits',
+  ]);
   return new Uint8Array(
-    await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, key, bytes * 8),
+    await crypto.subtle.deriveBits(
+      { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(salt), info: new Uint8Array(info) },
+      key,
+      bytes * 8,
+    ),
   );
 }
 
 /** RFC 8291 / RFC 8188 aes128gcm decryption, as a browser would do it. */
 async function decryptPush(body: Buffer): Promise<string> {
-  const salt = body.subarray(0, 16);
+  // Copies, so WebCrypto gets ArrayBuffer-backed views.
+  const salt = new Uint8Array(body.subarray(0, 16));
   const idLen = body[20];
-  const asPublic = body.subarray(21, 21 + idLen);
-  const ciphertext = body.subarray(21 + idLen);
+  const asPublic = new Uint8Array(body.subarray(21, 21 + idLen));
+  const ciphertext = new Uint8Array(body.subarray(21 + idLen));
   const asKey = await crypto.subtle.importKey(
     'raw',
     asPublic,

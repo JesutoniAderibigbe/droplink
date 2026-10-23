@@ -111,6 +111,13 @@ test('share target: shared photo + text reach the other device', async ({ browse
   await phone.goto('/settings');
   await phone.getByLabel('Default device', { exact: true }).selectOption({ index: 1 });
   await phone.getByLabel('Send to my default device without asking').check();
+  // Settings are written to IndexedDB asynchronously; confirm they persisted
+  // before leaving the page.
+  await phone.waitForTimeout(500);
+  await phone.reload();
+  await expect(phone.getByLabel('Send to my default device without asking')).toBeChecked({
+    timeout: 20_000,
+  });
   await phone.goto('/');
   await shareFromAnotherApp(phone, [
     { name: 'second.jpg', mimeType: 'image/jpeg', buffer: Buffer.alloc(1000, 1) },

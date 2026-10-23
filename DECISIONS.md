@@ -164,3 +164,18 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
   dark-mode danger failed at 2.28 and now uses a dark text token). `e2e/a11y.spec.ts` runs axe-core
   (WCAG 2.1 AA) on every screen in light and dark mode at 360 px and fails on horizontal scroll.
 - **Theme follows the OS** (`prefers-color-scheme`). There's no manual toggle, to keep it simple.
+
+## Docs and deploy
+
+- **CSP is generated at build time** (`scripts/write-headers.mjs` → `dist/_headers`), because
+  `netlify.toml` can't read env vars and the policy should name your Supabase project rather than
+  `*.supabase.co`. `style-src` allows `'unsafe-inline'` for Svelte's style attributes; scripts are
+  `'self'` only. CSP has no directive for WebRTC ICE (STUN/TURN), so none is listed.
+- **`vite preview` serves the same CSP**, and `e2e/csp.spec.ts` checks it with a positive control
+  (an inline script must be blocked). Injecting the header with Playwright routes was tried and
+  rejected: an installed route breaks the proxied Realtime WebSocket, and SW-served navigations bypass
+  routes anyway.
+- **Edge Function CORS** reflects any origin unless `ALLOWED_ORIGINS` is set. Production should set it.
+  Functions use bearer tokens (no cookies), so this is defence in depth, not the main protection.
+- **`docs/PROTOCOL.md`** documents identity, signaling, the data-channel protocol, push and the relay
+  format, so a native client can be added against the same schema.

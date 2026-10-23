@@ -14,6 +14,15 @@ const mkcertCert = path.join(certDir, 'dev-cert.pem');
 const mkcertKey = path.join(certDir, 'dev-key.pem');
 const hasMkcert = fs.existsSync(mkcertCert) && fs.existsSync(mkcertKey);
 
+// `vite preview` serves the CSP that Netlify will serve (dist/_headers, made
+// by scripts/write-headers.mjs), so the production build is tested under it.
+function builtCsp(): Record<string, string> {
+  const file = path.resolve(import.meta.dirname, 'dist/_headers');
+  if (!fs.existsSync(file)) return {};
+  const m = fs.readFileSync(file, 'utf8').match(/Content-Security-Policy: (.*)/);
+  return m ? { 'Content-Security-Policy': m[1] } : {};
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   // The browser talks to Supabase through the Vite dev server (same origin,
@@ -86,7 +95,7 @@ export default defineConfig(({ mode }) => {
         : undefined,
       proxy,
     },
-    preview: { host: true, port: 4173, proxy },
+    preview: { host: true, port: 4173, proxy, headers: builtCsp() },
     build: { target: 'es2022', sourcemap: true },
   };
 });
