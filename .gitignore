@@ -1,0 +1,14 @@
+node_modules
+dist
+dev-dist
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+certs/
+supabase/.temp
+supabase/.branches
+supabase/functions/.env
+test-results
+playwright-report
