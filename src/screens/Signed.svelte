@@ -2,6 +2,7 @@
   import { auth } from '../lib/state/auth.svelte';
   import { router } from '../lib/state/router.svelte';
   import { session, startSession } from '../lib/state/session.svelte';
+  import '../lib/state/presence.svelte';
   import AppHeader from '../components/AppHeader.svelte';
   import Home from './Home.svelte';
   import Settings from './Settings.svelte';

@@ -1,9 +1,15 @@
 <script lang="ts">
   import { session, otherDevices } from '../lib/state/session.svelte';
+  import { presence, isOnline } from '../lib/state/presence.svelte';
   import DeviceList from '../components/DeviceList.svelte';
   import DeviceIcon from '../components/DeviceIcon.svelte';
 
-  const others = $derived(otherDevices());
+  // Online devices first, then most recently seen.
+  const others = $derived(
+    otherDevices().toSorted(
+      (a, b) => Number(b.id in presence.online) - Number(a.id in presence.online),
+    ),
+  );
 </script>
 
 <main class="container stack">
@@ -17,10 +23,17 @@
   </section>
 
   <section class="card" aria-labelledby="devices-title">
-    <h2 id="devices-title">My devices</h2>
+    <div class="row spread">
+      <h2 id="devices-title">My devices</h2>
+      {#if presence.status !== 'connected'}
+        <span class="badge warn" role="status"
+          >{presence.status === 'connecting' ? 'Connecting…' : 'Offline, retrying…'}</span
+        >
+      {/if}
+    </div>
     <DeviceList
       devices={others}
-      isOnline={() => false}
+      {isOnline}
       emptyText="Sign in to DropLink with the same account on your other phone or computer and it will appear here."
     />
   </section>

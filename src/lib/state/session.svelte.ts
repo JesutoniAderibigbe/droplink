@@ -162,9 +162,16 @@ async function heartbeat(): Promise<void> {
   }
 }
 
+const renameListeners = new Set<() => void>();
+/** Notified after this device is renamed (presence re-announces the name). */
+export function onRenamed(fn: () => void): void {
+  renameListeners.add(fn);
+}
+
 export async function renameDevice(id: string, name: string): Promise<void> {
   await devicesApi.renameDevice(id, name);
   await refreshDevices();
+  if (id === session.device?.id) for (const fn of renameListeners) fn();
 }
 
 export async function removeDevice(id: string): Promise<void> {

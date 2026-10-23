@@ -42,3 +42,16 @@ Ambiguous choices made while building DropLink, with the reasoning. Newest at th
 - **Email sign-in sends both a link and a 6-digit code** (custom template). The code lets an installed
   PWA sign in without the link opening in a separate browser, and lets a phone sign in against local
   Supabase, whose links point at `127.0.0.1`.
+
+## Presence and signaling
+
+- **One private channel per user, `user:{uid}`**, used for both Presence and Broadcast. Presence key =
+  device id. Broadcast event names are the signal types; every payload carries `{ to, from,
+transferId }` and is validated (`core/signal.ts`) before use. Devices ignore messages not addressed
+  to them. Since only the owner can join (Realtime Authorization), `from` is trusted to be one of the
+  user's own devices, but the receiver still checks it against the device list.
+- **Offer/answer/ice carry an `attempt` number** so that, after a reconnect, late messages from an
+  older attempt are ignored.
+- **Testing gotcha:** a supabase-js client without an auth session pushes the anon key to Realtime
+  right after joining, and Realtime then closes the private channel. The app is unaffected (its
+  client holds the session). The Node tests use the `accessToken` client option.

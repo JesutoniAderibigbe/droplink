@@ -47,10 +47,12 @@ export function defaultDeviceName(hints: UaHints): string {
 
 export function sanitizeDeviceName(name: string): string {
   // Strip control characters (DEL included) and collapse whitespace; the DB limit is 60 chars.
-  return name
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\u0000-\u001f\u007f]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 60);
+  return (
+    name
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\u0000-\u001f\u007f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 60)
+  );
 }

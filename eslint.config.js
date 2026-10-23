@@ -22,6 +22,12 @@ export default ts.config(
     },
   },
   {
+    // State modules keep plain Sets/Maps for listener registries on purpose;
+    // they are not UI state and must not trigger re-renders.
+    files: ['src/lib/state/**/*.svelte.ts'],
+    rules: { 'svelte/prefer-svelte-reactivity': 'off' },
+  },
+  {
     files: ['**/*.svelte', '**/*.svelte.ts'],
     languageOptions: {
       parserOptions: {
