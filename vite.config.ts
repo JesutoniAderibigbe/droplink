@@ -51,7 +51,7 @@ export default defineConfig(({ mode }) => {
           globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
         },
         devOptions: { enabled: true, type: 'module', navigateFallback: 'index.html' },
-        includeAssets: ['icons/icon.svg', 'icons/apple-touch-icon.png', 'favicon.png'],
+        includeAssets: ['icons/*.svg', 'icons/apple-touch-icon.png', 'favicon.png', 'favicon.svg'],
         manifest: {
           id: '/',
           name: 'DropLink',
@@ -60,8 +60,8 @@ export default defineConfig(({ mode }) => {
           start_url: '/',
           scope: '/',
           display: 'standalone',
-          background_color: '#0f1115',
-          theme_color: '#2f6bff',
+          background_color: '#F3F4F6',
+          theme_color: '#E8400F',
           icons: [
             { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
             { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },

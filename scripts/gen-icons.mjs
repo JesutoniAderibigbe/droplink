@@ -1,25 +1,28 @@
-// Generates PNG icons from public/icons/icon.svg.
+// Generates PNG icons from the brand SVGs (logo sheet in the design canvas).
 // Usage: npm run icons
+//   public/icons/icon.svg           app icon (rounded square)   → 192, 512
+//   public/icons/icon-maskable.svg  full bleed, 80% safe zone   → maskable 512, apple-touch 180
+//   public/favicon.svg              simplified for tabs         → favicon.png 48
 import sharp from 'sharp';
 import { readFile } from 'node:fs/promises';
 
-const svg = await readFile(new URL('../public/icons/icon.svg', import.meta.url));
-const out = (name) => new URL(`../public/icons/${name}`, import.meta.url).pathname;
+const read = (p) => readFile(new URL(`../public/${p}`, import.meta.url));
+const out = (p) => new URL(`../public/${p}`, import.meta.url).pathname;
+// Render at high density so edges stay crisp after downscaling.
+const render = (svg, size, file) =>
+  sharp(svg, { density: 384 }).resize(size, size).png().toFile(out(file));
 
-await sharp(svg).resize(192, 192).png().toFile(out('icon-192.png'));
-await sharp(svg).resize(512, 512).png().toFile(out('icon-512.png'));
-await sharp(svg).resize(180, 180).png().toFile(out('apple-touch-icon.png'));
+const icon = await read('icons/icon.svg');
+const maskable = await read('icons/icon-maskable.svg');
+const favicon = await read('favicon.svg');
 
-// Maskable: the OS may crop to a circle, so keep the artwork inside the
-// central 80% "safe zone" on a full-bleed background.
-const inner = await sharp(svg).resize(400, 400).png().toBuffer();
-await sharp({ create: { width: 512, height: 512, channels: 4, background: '#2f6bff' } })
-  .composite([{ input: inner, top: 56, left: 56 }])
-  .png()
-  .toFile(out('icon-maskable-512.png'));
-
-await sharp(svg)
-  .resize(48, 48)
-  .png()
-  .toFile(new URL('../public/favicon.png', import.meta.url).pathname);
-console.log('Icons written to public/icons');
+await render(icon, 192, 'icons/icon-192.png');
+await render(icon, 512, 'icons/icon-512.png');
+await render(maskable, 512, 'icons/icon-maskable-512.png');
+// iOS rounds the corners itself, so it gets the full-bleed artwork.
+await render(maskable, 180, 'icons/apple-touch-icon.png');
+await render(favicon, 48, 'favicon.png');
+// Android notification badge: drawn as a one-colour silhouette, so use the
+// transparent mark rather than the square icon.
+await render(await read('icons/mark.svg'), 96, 'icons/badge-96.png');
+console.log('Icons written to public/icons and public/favicon.png');

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>DropLink (maskable)</title>
+  <rect width="512" height="512" fill="#E8400F"/>
+  <g transform="translate(51.2 51.2) scale(.8)">
+    <path d="M256 92C224 140 152 224 152 300a104 104 0 0 0 208 0c0-76-72-160-104-208z" fill="#FFFFFF"/>
+    <circle cx="256" cy="300" r="40" fill="#E8400F"/>
+    <path d="M126.1 375A150 150 0 0 0 385.9 375" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" opacity=".55"/>
+    <circle cx="384" cy="148" r="20" fill="#FFFFFF"/>
+  </g>
+</svg>

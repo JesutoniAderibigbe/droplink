@@ -58,7 +58,7 @@
   <div class="inner">
     <header class="brand row spread">
       <span class="row">
-        <span class="logo" aria-hidden="true"><Icon name="download" size={16} stroke={2.2} /></span>
+        <img class="logo" src="/icons/icon-small.svg" alt="" width="30" height="30" />
         <span class="wordmark">DropLink</span>
       </span>
     </header>
@@ -177,14 +177,9 @@
     gap: 1rem;
   }
   .logo {
+    display: block;
     width: 30px;
     height: 30px;
-    border-radius: 10px;
-    background: var(--ink);
-    color: var(--ink-text);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
   }
   .wordmark {
     font-family: var(--display);
