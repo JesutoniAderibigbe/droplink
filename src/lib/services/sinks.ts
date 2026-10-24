@@ -17,10 +17,6 @@ import type { FileSink, IncomingFileInfo, SavedFile, SinkFactory } from '../core
 import { dirPermission, loadDirHandle } from './downloadDir';
 
 const OPFS_DIR = 'incoming';
-/** Private copies (for "Open" in the app) are kept this long… */
-export const KEEP_COPY_MS = 7 * 24 * 3600_000;
-/** …unless they're this big, in which case they're dropped after an hour. */
-const KEEP_COPY_MAX_BYTES = 1024 * 1024 * 1024;
 
 export type SaveMode = 'folder' | 'download';
 
@@ -122,15 +118,9 @@ class OpfsDownloadSink implements FileSink {
       new File([file], name, { type: this.info.mimeType || 'application/octet-stream' }),
       name,
     );
-    // The copy stays in OPFS so the app can open it later (cleanupTempFiles
-    // removes it after KEEP_COPY_MS, or after an hour for very large files).
-    const keep = file.size <= KEEP_COPY_MAX_BYTES;
-    return {
-      savedName: name,
-      location: 'download',
-      mimeType: this.info.mimeType,
-      ...(keep ? { copyName: this.tmpName } : {}),
-    };
+    // The temp copy is removed by cleanupTempFiles() on a later start, once the
+    // browser has surely finished copying it into Downloads.
+    return { savedName: name, location: 'download', mimeType: this.info.mimeType };
   }
 
   async abort(): Promise<void> {
@@ -207,46 +197,17 @@ function triggerDownload(blob: Blob, name: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-/**
- * Remove old private copies: after KEEP_COPY_MS, or after an hour for files
- * too big to keep (those were only needed while the download was copied).
- */
+/** Remove OPFS temp files left over from earlier downloads (older than an hour). */
 export async function cleanupTempFiles(): Promise<void> {
   try {
     const root = await navigator.storage.getDirectory();
     const dir = await root.getDirectoryHandle(OPFS_DIR, { create: true });
-    const now = Date.now();
-    for await (const [name, handle] of dir.entries()) {
+    const cutoff = Date.now() - 3600_000;
+    for await (const name of dir.keys()) {
       const ts = Number(name.split('-')[0]);
-      if (!Number.isFinite(ts) || handle.kind !== 'file') {
-        await dir.removeEntry(name).catch(() => {});
-        continue;
-      }
-      const size = (await (handle as FileSystemFileHandle).getFile()).size;
-      const maxAge = size > KEEP_COPY_MAX_BYTES ? 3600_000 : KEEP_COPY_MS;
-      if (now - ts > maxAge) await dir.removeEntry(name).catch(() => {});
+      if (!Number.isFinite(ts) || ts < cutoff) await dir.removeEntry(name).catch(() => {});
     }
   } catch {
     /* OPFS unavailable */
-  }
-}
-
-/** A kept private copy, or null if it's gone. */
-export async function readCopy(copyName: string): Promise<File | null> {
-  try {
-    const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle(OPFS_DIR);
-    return await (await dir.getFileHandle(copyName)).getFile();
-  } catch {
-    return null;
-  }
-}
-
-/** Delete private copies (when history is cleared). */
-export async function deleteCopies(names: string[]): Promise<void> {
-  try {
-    const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle(OPFS_DIR);
-    for (const n of names) await dir.removeEntry(n).catch(() => {});
-  } catch {
-    /* nothing to delete */
   }
 }

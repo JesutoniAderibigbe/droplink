@@ -210,11 +210,10 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
 
 ## Opening received files
 
-- **Browsers can't read the Downloads folder**, so a file that was saved as a normal download (phones,
-  Safari/Firefox, or no folder chosen) is opened from the private OPFS copy written during receiving. That
-  copy is now kept for 7 days (files over 1 GB: 1 hour, so phones don't fill up) and deleted with
-  "Clear history". Files saved into the chosen folder are opened through the folder handle (asking for
-  permission again from the click if needed).
-- **Photos, video and audio open in an in-app viewer**; everything else opens in a new tab as a
-  blob URL (the browser shows PDFs and text, or downloads other types). On devices with the Web Share
-  API there's also **Share**, which hands the file to the system share sheet.
+- **Files saved into the folder the user chose** (desktop Chrome/Edge) have **Open** (photos, video and
+  audio in an in-app viewer; anything else in a new tab) and **Share** where the Web Share API exists.
+  The app reads them back through the stored folder handle.
+- **Files saved as downloads** (phones, Safari/Firefox, or no folder chosen) can't be reopened: browsers
+  never let a page read the Downloads folder or reveal a file. Instead each item says where it was saved,
+  with the exact name, and **Where is it?** shows device-specific directions (`core/whereToFind.ts`). A
+  private OPFS copy was tried and dropped at the owner's request: it doubled storage use.

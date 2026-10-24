@@ -17,12 +17,6 @@ export interface SavedFile {
   location: 'folder' | 'download' | 'text';
   /** For shared text items: the text itself (shown with a copy button). */
   text?: string;
-  /**
-   * Name of a private copy in the Origin Private File System, kept for a few
-   * days so the file can be opened from the app (browsers can't reach into
-   * the Downloads folder).
-   */
-  copyName?: string;
   mimeType?: string;
 }
 

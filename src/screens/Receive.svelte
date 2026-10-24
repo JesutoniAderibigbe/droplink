@@ -14,6 +14,7 @@
   import Icon from '../components/Icon.svelte';
   import Orb from '../components/Orb.svelte';
   import FileViewer from '../components/FileViewer.svelte';
+  import { whereToFind } from '../lib/core/whereToFind';
   import type { ReceivedItem } from '../lib/state/transfers.svelte';
   import {
     canOpen,
@@ -24,7 +25,13 @@
     viewKind,
   } from '../lib/services/receivedFiles';
 
-  // Open / Share a received file (from the chosen folder or the private copy).
+  // Open / Share a received file saved into the chosen folder. Downloads can't
+  // be reached from a web app, so those get directions instead.
+  const directions = whereToFind({
+    userAgent: navigator.userAgent,
+    maxTouchPoints: navigator.maxTouchPoints,
+  });
+  let whereOpen = $state<string | null>(null);
   const shareable = canShareFiles();
   let viewing = $state<File | null>(null);
   let busyId = $state<string | null>(null);
@@ -36,9 +43,7 @@
     try {
       const f = await getReceivedFile(r);
       if (!f) {
-        openError = `Couldn't find “${r.savedName}” any more. It may have been moved or deleted; look in your ${
-          r.location === 'folder' ? 'DropLink folder' : 'Downloads folder'
-        }.`;
+        openError = `Couldn't find “${r.savedName}” in your DropLink folder any more. It may have been moved or deleted.`;
       }
       return f;
     } finally {
@@ -251,7 +256,7 @@
       {:else}
         <ul class="list history">
           {#each transfers.received as r (r.transferId + r.fileId)}
-            <li class="row">
+            <li class="row wrap">
               {#if r.location === 'text'}
                 <FileThumb name="text" mime={TEXT_ITEM_MIME} size={44} />
               {:else}
@@ -298,11 +303,28 @@
                       >
                     {/if}
                   {:else}
-                    <small class="where"
-                      >{r.location === 'folder' ? 'In your DropLink folder' : 'In Downloads'}</small
+                    <button
+                      class="pill"
+                      aria-expanded={whereOpen === r.transferId + r.fileId}
+                      onclick={() =>
+                        (whereOpen =
+                          whereOpen === r.transferId + r.fileId ? null : r.transferId + r.fileId)}
                     >
+                      Where is it?
+                    </button>
                   {/if}
                 </span>
+              {/if}
+              {#if whereOpen === r.transferId + r.fileId}
+                <div class="where-panel" role="region" aria-label="Where to find {r.savedName}">
+                  <p>
+                    Saved to your <strong>{directions.place}</strong> folder as
+                    <strong>{r.savedName}</strong>.
+                  </p>
+                  <ol>
+                    {#each directions.steps as step (step)}<li>{step}</li>{/each}
+                  </ol>
+                </div>
               {/if}
             </li>
           {/each}
@@ -474,18 +496,32 @@
   .history {
     margin-top: 0.5rem;
   }
-  .history li {
+  .history > li {
     gap: 0.85rem;
     padding: 0.85rem 0.25rem;
+  }
+  .where-panel {
+    flex-basis: 100%;
+    margin: 0.25rem 0 0 calc(44px + 0.85rem);
+    padding: 0.75rem 0.9rem;
+    border-radius: 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .where-panel p {
+    margin: 0 0 0.35rem;
+  }
+  .where-panel ol {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.25rem;
+    color: var(--text-2);
   }
   .actions {
     gap: 0.4rem;
     flex: none;
-  }
-  .where {
-    color: var(--text-2);
-    font-size: 0.78rem;
-    white-space: nowrap;
   }
   .empty {
     margin: 1rem 0 0.5rem;

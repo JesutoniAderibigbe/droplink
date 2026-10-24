@@ -60,53 +60,24 @@ test('saves into the chosen folder with (1) collision names', async ({ browser }
   await expect(tab.locator('body')).toHaveText('second version');
 });
 
-// "Open" works for both places a file can land.
-test('received downloads open from the app (photo viewer, PDF in a tab)', async ({ browser }) => {
-  const email = uniqueEmail('open');
+// Downloads can't be reopened by a web app: the app says where the file is.
+test('downloaded files show where to find them', async ({ browser }) => {
+  const email = uniqueEmail('where');
   const phone = await newDevice(browser, email);
   const mac = await newDevice(browser, email);
   await mac.goto('/receive');
 
-  // 1. No folder chosen: the file goes to Downloads and a private copy is kept.
-  const png = Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==',
-    'base64',
-  );
   await phone.goto('/send');
   await phone
     .locator('input[type=file]')
-    .setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: png });
+    .setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: Buffer.alloc(500, 1) });
   await phone.getByRole('button', { name: /^Send to / }).click();
   await expect(phone.getByText('Delivered').first()).toBeVisible({ timeout: 30_000 });
-  const row = mac.getByRole('listitem').filter({ hasText: 'photo.png' });
-  await row.getByRole('button', { name: 'Open' }).click();
-  const viewer = mac.getByRole('dialog', { name: 'photo.png' });
-  await expect(viewer.getByRole('img', { name: 'photo.png' })).toBeVisible();
-  await expect
-    .poll(() => viewer.getByRole('img').evaluate((img: HTMLImageElement) => img.naturalWidth))
-    .toBe(1);
-  await mac.keyboard.press('Escape');
-  await expect(viewer).toHaveCount(0);
 
-  // 2. A PDF opens in a new tab with the right bytes.
-  await phone.getByRole('button', { name: 'Send more' }).click();
-  await phone.locator('input[type=file]').setInputFiles({
-    name: 'notes.pdf',
-    mimeType: 'application/pdf',
-    buffer: Buffer.from('%PDF-1.4\n% DropLink test\n'),
-  });
-  await phone.getByRole('button', { name: /^Send to / }).click();
-  await expect(phone.getByText('Delivered').first()).toBeVisible({ timeout: 30_000 });
-  const [tab] = await Promise.all([
-    mac.context().waitForEvent('page'),
-    mac
-      .getByRole('listitem')
-      .filter({ hasText: 'notes.pdf' })
-      .getByRole('button', { name: 'Open' })
-      .click(),
-  ]);
-  // Headless Chromium has no PDF viewer, so just check a tab opened (the
-  // text-file case in the folder test checks the bytes shown in a tab).
-  expect(tab).toBeTruthy();
-  await tab.close();
+  const row = mac.getByRole('listitem').filter({ hasText: 'photo.png' }).first();
+  await expect(row.getByRole('button', { name: 'Open' })).toHaveCount(0);
+  await row.getByRole('button', { name: 'Where is it?' }).click();
+  const panel = mac.getByRole('region', { name: 'Where to find photo.png' });
+  await expect(panel).toContainText('Saved to your Downloads folder as photo.png');
+  await expect(panel.getByRole('listitem').first()).toBeVisible();
 });

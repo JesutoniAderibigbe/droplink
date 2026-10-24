@@ -1,24 +1,19 @@
-// Getting a received file back so the app can open or share it.
-//
-// - Saved into the chosen folder: read it through the stored folder handle
-//   (asking for permission again if the browser dropped it; this runs from a
-//   click, so the prompt is allowed).
-// - Saved as a normal download: browsers never let a page read the Downloads
-//   folder, so we use the private copy kept in OPFS (see sinks.ts).
+// Getting a received file back so the app can open or share it. Only files
+// saved into the folder the user chose (File System Access) can be reopened:
+// browsers never let a page read the Downloads folder, so for downloads the
+// app shows directions instead (core/whereToFind.ts).
 
 import { dirPermission, loadDirHandle, requestDirPermission } from './downloadDir';
-import { readCopy } from './sinks';
 
 export interface OpenableItem {
   savedName: string;
   location: 'folder' | 'download' | 'text';
-  copyName?: string;
   mimeType?: string;
 }
 
 /** Whether "Open" can work for this item at all. */
 export function canOpen(item: OpenableItem): boolean {
-  return item.location === 'folder' || !!item.copyName;
+  return item.location === 'folder';
 }
 
 export async function getReceivedFile(item: OpenableItem): Promise<File | null> {
@@ -33,14 +28,10 @@ export async function getReceivedFile(item: OpenableItem): Promise<File | null> 
           const f = await (await dir.getFileHandle(item.savedName)).getFile();
           return f.type ? f : new File([f], item.savedName, { type });
         } catch {
-          /* moved or deleted: try the copy */
+          /* moved or deleted */
         }
       }
     }
-  }
-  if (item.copyName) {
-    const f = await readCopy(item.copyName);
-    if (f) return new File([f], item.savedName, { type, lastModified: f.lastModified });
   }
   return null;
 }

@@ -4,7 +4,7 @@ import { get, set } from 'idb-keyval';
 import type { SendFile } from '../core/sink';
 import { keys, kvStore } from '../services/kv';
 import * as outbox from '../services/outbox';
-import { cleanupTempFiles, defaultSinkFactory, deleteCopies } from '../services/sinks';
+import { cleanupTempFiles, defaultSinkFactory } from '../services/sinks';
 import {
   TransferEngine,
   type EngineDeps,
@@ -26,8 +26,6 @@ export interface ReceivedItem {
   text?: string;
   at: number;
   checksumOk?: boolean;
-  /** Private copy for "Open" (see SavedFile.copyName). */
-  copyName?: string;
   mimeType?: string;
 }
 
@@ -110,7 +108,6 @@ export function recordReceivedFile(t: IncomingView, f: IncomingFileView): void {
     text: f.saved?.text,
     at: Date.now(),
     checksumOk: f.checksumOk,
-    copyName: f.saved?.copyName,
     mimeType: f.saved?.mimeType,
   };
   transfers.received = [item, ...transfers.received].slice(0, HISTORY_LIMIT);
@@ -256,7 +253,6 @@ export function cancelIncomingFile(transferId: string, fileId: string): void {
 }
 
 export async function clearHistory(): Promise<void> {
-  await deleteCopies(transfers.received.flatMap((r) => (r.copyName ? [r.copyName] : [])));
   transfers.received = [];
   transfers.sent = [];
   if (session.device) {
