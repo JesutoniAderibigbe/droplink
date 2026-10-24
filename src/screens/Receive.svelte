@@ -244,6 +244,14 @@
             {t.phase === 'connecting' ? 'Connecting to' : 'Reconnecting to'}
             {t.fromName}…
           </p>
+        {:else if t.route}
+          <p class="muted small">
+            {t.route === 'lan'
+              ? 'Direct over your local network'
+              : t.route === 'internet'
+                ? 'Direct over the internet: speed is limited by your internet upload'
+                : 'Through the TURN relay server: speed is limited by your internet connection'}
+          </p>
         {/if}
       {/each}
 

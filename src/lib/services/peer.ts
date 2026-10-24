@@ -133,6 +133,36 @@ export class PeerSession {
     }
   }
 
+  /**
+   * Which path the connection took, from WebRTC stats:
+   *   lan      both ends use local addresses (same Wi-Fi / hotspot): fastest
+   *   internet direct through the routers (speed = internet upload)
+   *   turn     bounced through the TURN relay server
+   */
+  async route(): Promise<'lan' | 'internet' | 'turn' | null> {
+    try {
+      const stats = await this.pc.getStats();
+      let pairId: string | undefined;
+      stats.forEach((r) => {
+        if (r.type === 'transport' && r.selectedCandidatePairId) pairId = r.selectedCandidatePairId;
+      });
+      let pair: RTCIceCandidatePairStats | undefined;
+      stats.forEach((r) => {
+        if (r.type !== 'candidate-pair') return;
+        if (pairId ? r.id === pairId : r.nominated && r.state === 'succeeded') pair = r;
+      });
+      if (!pair) return null;
+      const local = stats.get(pair.localCandidateId);
+      const remote = stats.get(pair.remoteCandidateId);
+      const types = [local?.candidateType, remote?.candidateType];
+      if (types.includes('relay')) return 'turn';
+      if (types.every((t) => t === 'host')) return 'lan';
+      return 'internet';
+    } catch {
+      return null;
+    }
+  }
+
   /** Tear the connection down as if the network failed (dev/test hook). */
   simulateFailure(): void {
     this.fail('simulated network failure');

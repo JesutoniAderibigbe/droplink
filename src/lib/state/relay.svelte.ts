@@ -92,6 +92,7 @@ async function receiveRelayed(row: TransferRow, privateKey: CryptoKey): Promise<
     totalBytes: row.total_bytes,
     files: [],
     createdAt: Date.now(),
+    route: null,
   };
   const emit = () => upsertIncoming({ ...view, files: view.files.map((f) => ({ ...f })) });
   emit();

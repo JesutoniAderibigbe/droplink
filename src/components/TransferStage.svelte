@@ -136,7 +136,15 @@
             : `Beaming to ${t.targetName}`}
     </p>
     <p class="muted beam-sub">
-      {t.phase === 'relaying' ? 'End-to-end encrypted' : 'Peer to peer'}
+      {t.phase === 'relaying'
+        ? 'End-to-end encrypted'
+        : t.route === 'lan'
+          ? 'Direct · same network'
+          : t.route === 'internet'
+            ? 'Direct · over the internet'
+            : t.route === 'turn'
+              ? 'Via TURN relay server'
+              : 'Peer to peer'}
       {#if speed > 0 && t.phase !== 'connecting'}· {formatBytes(speed)}/s{#if etaText}
           · {etaText}{/if}{/if}
     </p>

@@ -63,6 +63,8 @@ export interface OutgoingView {
   /** For the "Waiting for MacBook Air… 14 s" countdown. */
   waitUntil: number | null;
   createdAt: number;
+  /** Network path of the live connection (see PeerSession.route). */
+  route: 'lan' | 'internet' | 'turn' | null;
 }
 
 export type IncomingPhase =
@@ -89,6 +91,7 @@ export interface IncomingView {
   totalBytes: number;
   files: IncomingFileView[];
   createdAt: number;
+  route: 'lan' | 'internet' | 'turn' | null;
 }
 
 export type RelayOutcome = 'relayed' | 'not-eligible';
@@ -149,6 +152,7 @@ export class OutgoingTransfer {
   detail = '';
   /** Why the relay wasn't used (shown while queued). */
   relayNote = '';
+  route: OutgoingView['route'] = null;
   waitUntil: number | null = null;
   readonly createdAt = Date.now();
 
@@ -183,6 +187,7 @@ export class OutgoingTransfer {
       transferredBytes: this.queue.transferredBytes,
       waitUntil: this.waitUntil,
       createdAt: this.createdAt,
+      route: this.route,
     };
   }
 
@@ -381,6 +386,10 @@ export class OutgoingTransfer {
         }
         failures = 0;
         this.emit('sending', '');
+        void reportRoute(peer, (r) => {
+          this.route = r;
+          this.emit();
+        });
         await sendOverChannel({
           channel,
           queue: this.queue,
@@ -452,6 +461,19 @@ export class OutgoingTransfer {
   }
 }
 
+/** Read the connection path now and again shortly after (ICE can still switch). */
+async function reportRoute(
+  peer: PeerSession,
+  set: (r: 'lan' | 'internet' | 'turn' | null) => void,
+) {
+  for (const wait of [300, 3000]) {
+    await new Promise((r) => setTimeout(r, wait));
+    if (peer.isClosed) return;
+    const r = await peer.route();
+    if (r) set(r);
+  }
+}
+
 function abortPromise(signal: AbortSignal): Promise<never> {
   return new Promise((_, reject) => {
     if (signal.aborted) reject(new TransferCancelled());
@@ -487,6 +509,7 @@ class IncomingTransfer {
       totalBytes,
       files: [],
       createdAt: Date.now(),
+      route: null,
     };
     const deps = engine.deps;
     this.session = new ReceiverSession(
@@ -580,6 +603,10 @@ class IncomingTransfer {
       const channel = await peer.channel;
       if (this.peer !== peer) return;
       this.session.attach(channel, msg.attempt);
+      void reportRoute(peer, (r) => {
+        this.view.route = r;
+        this.emit();
+      });
       if (this.view.phase === 'reconnecting') this.emit('receiving');
     } catch (e) {
       console.warn('[receive] connection attempt failed', (e as Error).message);
