@@ -12,6 +12,8 @@ export const SIGNAL_TYPES = [
   'transfer-request',
   'transfer-accept',
   'transfer-decline',
+  // Sender finished uploading to the encrypted relay: an open receiver fetches now.
+  'relay-ready',
 ] as const;
 export type SignalType = (typeof SIGNAL_TYPES)[number];
 
@@ -48,6 +50,7 @@ export interface SignalMap {
   'transfer-request': TransferRequestSignal;
   'transfer-accept': TransferAcceptSignal;
   'transfer-decline': TransferDeclineSignal;
+  'relay-ready': Base;
 }
 
 export interface PresenceMeta {
@@ -92,6 +95,7 @@ export function parseSignal<T extends SignalType>(type: T, raw: unknown): Signal
       if (!['busy', 'declined', 'unknown'].includes(raw.reason as string)) return null;
       break;
     case 'transfer-accept':
+    case 'relay-ready':
       break;
     default:
       return null;

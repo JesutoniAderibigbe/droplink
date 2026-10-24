@@ -25,6 +25,8 @@ describe('parseSignal', () => {
     ).not.toBeNull();
     expect(parseSignal('transfer-accept', base())).not.toBeNull();
     expect(parseSignal('transfer-decline', { ...base(), reason: 'busy' })).not.toBeNull();
+    expect(parseSignal('relay-ready', base())).not.toBeNull();
+    expect(parseSignal('relay-ready', { ...base(), transferId: 'nope' })).toBeNull();
   });
 
   it('rejects missing addressing or bad ids', () => {

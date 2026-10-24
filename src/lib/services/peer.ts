@@ -5,9 +5,10 @@
 // Each reconnect is a brand-new PeerSession with attempt + 1; messages for
 // older attempts are ignored by the router in services/transfers.ts.
 
+import { TRANSFER } from '../config';
 import type { Signaling } from './signaling';
 
-const CONNECT_TIMEOUT_MS = 25_000;
+const CONNECT_TIMEOUT_MS = TRANSFER.connectTimeoutMs;
 /** "disconnected" can recover on its own (e.g. a Wi-Fi blip); give it a moment. */
 const DISCONNECTED_GRACE_MS = 6_000;
 
@@ -78,6 +79,8 @@ export class PeerSession {
 
   /** Offerer: create and send the offer. */
   async start(): Promise<void> {
+    // Dev/test only: pretend the networks block direct connections.
+    if (import.meta.env.DEV && localStorage.getItem('droplink:dev-no-p2p') === '1') return;
     const offer = await this.pc.createOffer();
     await this.pc.setLocalDescription(offer);
     await this.signal('offer', { sdp: offer.sdp ?? '' });

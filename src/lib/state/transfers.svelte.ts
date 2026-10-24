@@ -5,6 +5,7 @@ import type { SendFile } from '../core/sink';
 import { keys, kvStore } from '../services/kv';
 import * as outbox from '../services/outbox';
 import { cleanupTempFiles, defaultSinkFactory } from '../services/sinks';
+import { getIceServers } from '../services/ice';
 import {
   TransferEngine,
   type EngineDeps,
@@ -131,6 +132,8 @@ const HISTORY_LIMIT = 200;
 
 onSessionReady(({ userId, device }) => {
   void cleanupTempFiles();
+  // Fetch STUN/TURN servers now, so pressing Send doesn't wait on it.
+  void getIceServers();
   historyKey = keys.received(device.id);
   sentKey = keys.sent(device.id);
   void get<SentItem[]>(keys.sent(device.id), kvStore).then((h) => {

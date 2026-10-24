@@ -19,6 +19,7 @@ import type { IncomingFileView, IncomingView } from '../services/transferEngine'
 import * as api from '../services/transfersApi';
 import { deviceById, onSessionReady, session } from './session.svelte';
 import { settings } from './settings.svelte';
+import { getSignaling } from './presence.svelte';
 import { configureEngine, recordReceivedFile, upsertIncoming } from './transfers.svelte';
 
 const INBOX_INTERVAL_MS = 2 * 60_000;
@@ -63,6 +64,10 @@ configureEngine({
       return 'not-eligible';
     }
     for (const f of files) t.queue.complete(f.id);
+    // If the receiver is open (just unreachable directly), it fetches right away.
+    getSignaling()
+      .send('relay-ready', { to: t.target.id, transferId: t.id })
+      .catch(() => {});
     t.emit(
       'relayed',
       `Encrypted and uploaded. ${t.view().targetName} gets it the next time DropLink opens there (within 24 hours). You can close DropLink.`,
@@ -158,11 +163,13 @@ export async function checkInbox(): Promise<void> {
 
 onSessionReady(() => {
   void checkInbox();
+  const offReady = getSignaling().on('relay-ready', () => void checkInbox());
   const onVisible = () => document.visibilityState === 'visible' && void checkInbox();
   document.addEventListener('visibilitychange', onVisible);
   const timer = setInterval(() => void checkInbox(), INBOX_INTERVAL_MS);
   return () => {
     document.removeEventListener('visibilitychange', onVisible);
     clearInterval(timer);
+    offReady();
   };
 });

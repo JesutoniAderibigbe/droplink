@@ -395,6 +395,12 @@ export class OutgoingTransfer {
         if (e instanceof TransferCancelled || signal.aborted) throw new TransferCancelled();
         console.warn('[send] connection attempt failed', (e as Error).message);
         failures++;
+        // Never connected at all: a direct link isn't going to happen on these
+        // networks, so stop early and let the relay take over.
+        if (!markedP2P && failures >= TRANSFER.firstConnectAttempts) {
+          this.emit('connecting', "Couldn't connect directly.");
+          return 'unreachable';
+        }
         if (failures > TRANSFER.reconnectAttempts) {
           if (markedP2P) api.trySetStatus(this.id, 'pending');
           return 'unreachable';

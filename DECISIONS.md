@@ -217,3 +217,15 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
   never let a page read the Downloads folder or reveal a file. Instead each item says where it was saved,
   with the exact name, and **Where is it?** shows device-specific directions (`core/whereToFind.ts`). A
   private OPFS copy was tried and dropped at the owner's request: it doubled storage use.
+
+## Speed: no long waits
+
+- **One 10-second attempt at a direct link**, then the relay, when the devices have never connected
+  (no TURN, strict NAT). Previously each attempt could take 25 s with up to 6 retries, so minutes of
+  "Connecting…". Once a link has worked, drops are still retried patiently so the file resumes.
+- **`relay-ready` signal:** after a relay upload the sender pings the receiver, and an open receiver
+  downloads at once instead of on its 2-minute inbox timer. Measured end to end with no direct link:
+  11.5 s for a small file.
+- **ICE servers are fetched when the app opens**, not when Send is pressed.
+- **Cloudflare TURN is the real fix** for networks where direct links fail. With it, devices connect in
+  1–3 s and files go at full speed instead of through the relay.

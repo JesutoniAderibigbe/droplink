@@ -32,6 +32,14 @@ export const TRANSFER = {
   relayChunkBytes: 1 * MiB,
   /** Reconnect attempts for a dropped P2P connection (exponential backoff). */
   reconnectAttempts: 5,
+  /**
+   * Attempts before giving up on a direct link that never connected at all
+   * (strict NAT, no TURN): after this we fall back to the relay instead of
+   * spending minutes on retries.
+   */
+  firstConnectAttempts: 1,
+  /** How long one WebRTC connection attempt may take. */
+  connectTimeoutMs: 10_000,
   reconnectBaseDelayMs: 1_000,
 } as const;
 

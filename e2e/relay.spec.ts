@@ -169,3 +169,31 @@ test('relay cleanup: expired relays are deleted by the hourly job', async ({ bro
     .poll(async () => (await rest(`transfers?id=eq.${row.id}&select=status`))[0].status)
     .toBe('expired');
 });
+
+test('no direct link possible: falls back fast and an open receiver gets it at once', async ({
+  browser,
+}) => {
+  test.setTimeout(3 * 60_000);
+  const email = uniqueEmail('m9f');
+  const phone = await newDevice(browser, email);
+  const mac = await newDevice(browser, email);
+  await phone.evaluate(() => localStorage.setItem('droplink:dev-no-p2p', '1'));
+  await mac.goto('/receive');
+
+  await phone.goto('/send');
+  await expect(phone.getByRole('radio', { name: /Online/ })).toBeVisible({ timeout: 30_000 });
+  await phone.locator('input[type=file]').setInputFiles({
+    name: 'fallback.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('hello relay'),
+  });
+  const started = Date.now();
+  await phone.getByRole('button', { name: /^Send to / }).click();
+
+  await expect(phone.getByText('Uploaded securely')).toBeVisible({ timeout: 60_000 });
+  // The open Mac is pinged (relay-ready) and fetches straight away, not on its 2-minute timer.
+  await expect(mac.getByText('fallback.txt').first()).toBeVisible({ timeout: 15_000 });
+  const seconds = (Date.now() - started) / 1000;
+  console.log(`fallback delivered in ${seconds.toFixed(1)} s`);
+  expect(seconds).toBeLessThan(25);
+});
