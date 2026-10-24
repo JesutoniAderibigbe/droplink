@@ -207,3 +207,14 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
   history, because the server never stores file names; placeholders ("[2.4 GB]", "[120] of 500 MB")
   are real numbers from the database. "Relay now" and the "Encrypted relay fallback" switch are new
   engine features the design called for.
+
+## Opening received files
+
+- **Browsers can't read the Downloads folder**, so a file that was saved as a normal download (phones,
+  Safari/Firefox, or no folder chosen) is opened from the private OPFS copy written during receiving. That
+  copy is now kept for 7 days (files over 1 GB: 1 hour, so phones don't fill up) and deleted with
+  "Clear history". Files saved into the chosen folder are opened through the folder handle (asking for
+  permission again from the click if needed).
+- **Photos, video and audio open in an in-app viewer**; everything else opens in a new tab as a
+  blob URL (the browser shows PDFs and text, or downloads other types). On devices with the Web Share
+  API there's also **Share**, which hands the file to the system share sheet.

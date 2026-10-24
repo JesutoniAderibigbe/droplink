@@ -60,6 +60,7 @@
         mime: s.mimeType,
         line: `To ${s.toName} · ${formatBytes(s.size)} · ${s.via === 'relay' ? 'Encrypted relay' : 'P2P'}`,
         at: s.at,
+        received: false,
       })),
       ...transfers.received.map((r) => ({
         key: `r${r.transferId}${r.fileId}`,
@@ -67,6 +68,7 @@
         mime: r.location === 'text' ? 'application/x-droplink-text' : '',
         line: `From ${r.fromName} · ${r.location === 'text' ? 'Text' : formatBytes(r.size)} · ${timeAgo(r.at)}`,
         at: r.at,
+        received: true,
       })),
     ]
       .sort((a, b) => b.at - a.at)
@@ -129,7 +131,11 @@
           <li class="row item">
             <FileThumb name={r.name} mime={r.mime} size={38} />
             <span class="grow">
-              <span class="block ellipsis fname">{r.name}</span>
+              {#if r.received}
+                <a class="block ellipsis fname" href="/receive">{r.name}</a>
+              {:else}
+                <span class="block ellipsis fname">{r.name}</span>
+              {/if}
               <small class="block ellipsis">{r.line}</small>
             </span>
             <span class="ok-check"
@@ -224,6 +230,11 @@
   .fname {
     font-size: 0.9rem;
     font-weight: 500;
+    color: inherit;
+    text-decoration: none;
+  }
+  a.fname:hover {
+    text-decoration: underline;
   }
   .ok-check {
     color: var(--ok);

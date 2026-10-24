@@ -13,6 +13,56 @@
   import FileThumb from '../components/FileThumb.svelte';
   import Icon from '../components/Icon.svelte';
   import Orb from '../components/Orb.svelte';
+  import FileViewer from '../components/FileViewer.svelte';
+  import type { ReceivedItem } from '../lib/state/transfers.svelte';
+  import {
+    canOpen,
+    canShareFiles,
+    getReceivedFile,
+    openInNewTab,
+    shareFile,
+    viewKind,
+  } from '../lib/services/receivedFiles';
+
+  // Open / Share a received file (from the chosen folder or the private copy).
+  const shareable = canShareFiles();
+  let viewing = $state<File | null>(null);
+  let busyId = $state<string | null>(null);
+  let openError = $state('');
+
+  async function fetchFile(r: ReceivedItem): Promise<File | null> {
+    openError = '';
+    busyId = r.fileId;
+    try {
+      const f = await getReceivedFile(r);
+      if (!f) {
+        openError = `Couldn't find “${r.savedName}” any more. It may have been moved or deleted; look in your ${
+          r.location === 'folder' ? 'DropLink folder' : 'Downloads folder'
+        }.`;
+      }
+      return f;
+    } finally {
+      busyId = null;
+    }
+  }
+
+  async function open(r: ReceivedItem) {
+    const f = await fetchFile(r);
+    if (!f) return;
+    if (viewKind(f) === 'other') openInNewTab(f);
+    else viewing = f;
+  }
+
+  async function share(r: ReceivedItem) {
+    const f = await fetchFile(r);
+    if (!f) return;
+    try {
+      if ((await shareFile(f)) === 'unsupported')
+        openError = 'This browser can’t share files. Use Open instead.';
+    } catch (e) {
+      openError = humanError(e);
+    }
+  }
 
   // Opened from a push notification (/receive?transfer=<id>): tell the waiting
   // sender we're here, as soon as we're connected to signaling.
@@ -192,6 +242,8 @@
         {/if}
       {/each}
 
+      {#if openError}<p class="error" role="alert">{openError}</p>{/if}
+
       {#if transfers.received.length === 0 && active.length === 0}
         <p class="muted empty">
           Nothing received yet. Files you send to this device from your other devices land here.
@@ -235,9 +287,22 @@
                   >
                 </span>
               {:else}
-                <small class="where"
-                  >{r.location === 'folder' ? 'In your DropLink folder' : 'In Downloads'}</small
-                >
+                <span class="row actions">
+                  {#if canOpen(r)}
+                    <button class="pill" onclick={() => open(r)} disabled={busyId === r.fileId}
+                      >Open</button
+                    >
+                    {#if shareable}
+                      <button class="pill" onclick={() => share(r)} disabled={busyId === r.fileId}
+                        >Share</button
+                      >
+                    {/if}
+                  {:else}
+                    <small class="where"
+                      >{r.location === 'folder' ? 'In your DropLink folder' : 'In Downloads'}</small
+                    >
+                  {/if}
+                </span>
               {/if}
             </li>
           {/each}
@@ -245,6 +310,14 @@
       {/if}
     </section>
   </div>
+
+  {#if viewing}
+    <FileViewer
+      file={viewing}
+      onclose={() => (viewing = null)}
+      onshare={shareable ? () => viewing && shareFile(viewing).catch(() => {}) : undefined}
+    />
+  {/if}
 
   {#if newest}
     <aside class="glass incoming" aria-live="polite" aria-label="Incoming transfer">
@@ -404,6 +477,10 @@
   .history li {
     gap: 0.85rem;
     padding: 0.85rem 0.25rem;
+  }
+  .actions {
+    gap: 0.4rem;
+    flex: none;
   }
   .where {
     color: var(--text-2);
