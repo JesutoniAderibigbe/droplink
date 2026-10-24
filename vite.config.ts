@@ -61,7 +61,9 @@ export default defineConfig(({ mode }) => {
           scope: '/',
           display: 'standalone',
           background_color: '#F3F4F6',
-          theme_color: '#E8400F',
+          // Same as the page background so the installed app's title bar blends in
+          // (index.html refines it per light/dark scheme).
+          theme_color: '#F3F4F6',
           icons: [
             { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
             { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },

@@ -276,5 +276,9 @@ with mkcert), signed in with the same account.
     signed out with a "removed" message.
 14. **Delete account** (use a throwaway account): Settings → type DELETE → you're signed out;
     signing in again starts fresh.
-15. **Dark mode + screen reader:** switch the OS to dark mode and check it's readable; try
+15. **Phone hotspot:** turn on the phone's hotspot, connect the laptop to it, open DropLink on both
+    and send a large file. It should go device to device over the hotspot link (fast, and it doesn't use
+    mobile data for the file; check `chrome://webrtc-internals` for a "host" candidate pair). The phone
+    still needs mobile data for sign-in and signaling.
+16. **Dark mode + screen reader:** switch the OS to dark mode and check it's readable; try
     VoiceOver / TalkBack on Home and Send.
