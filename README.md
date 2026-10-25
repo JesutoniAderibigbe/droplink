@@ -1,6 +1,7 @@
 # DropLink
 
-AirDrop-style file sharing between **your own** devices, as an installable web app (PWA) on Supabase.
+AirDrop-style file sharing between **your own** devices, and with **people you know** (Android ↔
+iPhone ↔ Mac ↔ Windows), as an installable web app (PWA) on Supabase.
 
 - Sign in on your phone and your computer with the same account. They find each other: no pairing.
 - Share from any Android app (Gallery, Files, WhatsApp…) → DropLink → your Mac. Or pick or drag
@@ -12,6 +13,9 @@ AirDrop-style file sharing between **your own** devices, as an installable web a
   and parked in a relay. They're downloaded the next time DropLink opens there, then deleted
   (and always after 24 h).
 - On desktop Chrome or Edge, files stream straight into a folder you picked once.
+- **People**: add a friend by QR code, link or email. Once they accept, their phone or computer
+  shows up when you send, whatever it runs. Files arrive byte for byte: original quality, never
+  compressed.
 
 ## In simple terms
 
@@ -37,9 +41,15 @@ Think of DropLink as a private courier between your own phone and computer.
    that nobody collects are cleared after 24 hours. The server can't open them.
 7. **Where files land**: on a computer, into a folder you choose once (or your Downloads folder). On
    a phone, into Downloads. DropLink tells you exactly where to look.
+8. **Sending to someone else** works the same way once you're connected. You show them your QR
+   code (or send them a link, or add their email and they accept). From then on their devices
+   appear in your Send list next to yours, and yours in theirs. It doesn't matter if one of you has
+   an Android phone and the other an iPhone: DropLink runs in the browser on both, and the file is
+   copied exactly as it is, so a photo or video keeps its full quality (unlike chat apps that
+   shrink them). Only people you've connected with can send to you, and you can remove anyone.
 
-What the server knows: your email and name, your device names, and that a transfer happened and how
-big it was. What it never sees: what's inside your files or what they're called.
+What the server knows: your email and name, your device names, who your contacts are, and that a
+transfer happened and how big it was. What it never sees: what's inside your files or what they're called.
 
 ## How it works
 
@@ -64,7 +74,7 @@ big it was. What it never sees: what's inside your files or what they're called.
   behind Row Level Security. File names never reach the server in plaintext.
 - **Realtime**: Presence says which devices are online; Broadcast carries WebRTC offers, answers
   and ICE candidates, addressed `{ to, from }`. Realtime Authorization means only you can join
-  `user:{your id}`.
+  `user:{your id}`, and only two accepted contacts can join their shared `pair:{a}:{b}` channel.
 - **Edge Functions**: `turn-credentials` (Cloudflare TURN), `notify-device` (Web Push),
   `relay-cleanup` (hourly, via pg_cron), `delete-account`.
 - **Relay crypto**: ECDH P-256 (ephemeral key + receiving device's key) → HKDF-SHA-256 →
@@ -93,18 +103,18 @@ Live: **https://droplink-app-m8bs.netlify.app** · Source and CI/CD: this repo (
 
 ### Components
 
-| Layer              | Technology                                                               | Job                                                                                      |
-| ------------------ | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| Client             | Svelte 5 (runes) + Vite, installable PWA                                 | UI, WebRTC, encryption, saving files. All file bytes are handled here.                   |
-| Service worker     | Workbox (`src/sw.ts`)                                                    | Offline shell, Android share target, push notifications, notification click.             |
-| Identity           | Supabase Auth (email + password, no emails sent)                         | One account = one set of devices.                                                        |
-| Database           | Supabase Postgres + Row Level Security                                   | Devices, public keys, transfer metadata, quotas. Never file contents or plaintext names. |
-| Signaling          | Supabase Realtime (Presence + Broadcast) on private channel `user:{uid}` | Who's online; WebRTC offer/answer/ICE; `relay-ready` pings.                              |
-| Direct transport   | WebRTC data channel (STUN + Cloudflare TURN)                             | Peer-to-peer file bytes.                                                                 |
-| Fallback transport | Supabase Storage bucket `relay`                                          | End-to-end encrypted chunks when the other device isn't reachable.                       |
-| Server logic       | Supabase Edge Functions (Deno)                                           | `turn-credentials`, `notify-device` (Web Push), `relay-cleanup`, `delete-account`.       |
-| Scheduling         | `pg_cron` + `pg_net` + Vault                                             | Hourly relay cleanup.                                                                    |
-| Hosting            | Netlify (static `dist/` + `_headers` CSP)                                | Serves the app. No server code runs there.                                               |
+| Layer              | Technology                                                                                   | Job                                                                                      |
+| ------------------ | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Client             | Svelte 5 (runes) + Vite, installable PWA                                                     | UI, WebRTC, encryption, saving files. All file bytes are handled here.                   |
+| Service worker     | Workbox (`src/sw.ts`)                                                                        | Offline shell, Android share target, push notifications, notification click.             |
+| Identity           | Supabase Auth (email + password, no emails sent)                                             | One account = one set of devices.                                                        |
+| Database           | Supabase Postgres + Row Level Security                                                       | Devices, public keys, transfer metadata, quotas. Never file contents or plaintext names. |
+| Signaling          | Supabase Realtime (Presence + Broadcast) on private channels `user:{uid}` and `pair:{a}:{b}` | Who's online (mine and my contacts'); WebRTC offer/answer/ICE; `relay-ready` pings.      |
+| Direct transport   | WebRTC data channel (STUN + Cloudflare TURN)                                                 | Peer-to-peer file bytes.                                                                 |
+| Fallback transport | Supabase Storage bucket `relay`                                                              | End-to-end encrypted chunks when the other device isn't reachable.                       |
+| Server logic       | Supabase Edge Functions (Deno)                                                               | `turn-credentials`, `notify-device` (Web Push), `relay-cleanup`, `delete-account`.       |
+| Scheduling         | `pg_cron` + `pg_net` + Vault                                                                 | Hourly relay cleanup.                                                                    |
+| Hosting            | Netlify (static `dist/` + `_headers` CSP)                                                    | Serves the app. No server code runs there.                                               |
 
 ### What happens when you press Send
 
@@ -154,6 +164,8 @@ internet", "Via TURN relay server"), read from WebRTC `getStats()`.
 | `transfers`          | From/to device, file count, total size, status. A trigger enforces the state machine.  |
 | `relay_objects`      | Each encrypted object in Storage; Storage policies only allow uploads registered here. |
 | `usage_daily`        | Per-user counters for quotas.                                                          |
+| `contacts`           | One row per pair of people: pending request or accepted. Changed only through RPCs.    |
+| `contact_invites`    | One-time QR/link invites: only a hash of the token, 30-minute expiry.                  |
 
 Quotas are enforced **in the database** by triggers (`limit_transfers_per_hour`,
 `limit_relay_bytes_per_day`, …), so a modified client can't bypass them. They fail with `PT429` /
@@ -163,7 +175,13 @@ Quotas are enforced **in the database** by triggers (`limit_transfers_per_hour`,
 
 - **RLS everywhere**: every row is scoped to `auth.uid()`; column grants stop clients from editing
   fields like status or sizes directly.
-- **Realtime Authorization**: only your own sessions can join `user:{uid}`.
+- **Realtime Authorization**: only your own sessions can join `user:{uid}`; only the two people in
+  an accepted contact can join `pair:{a}:{b}`. On a pair channel, the app also drops any message
+  that claims to come from a device the other person doesn't own.
+- **Contacts**: someone can only see your devices, send you files, or join a channel with you after
+  you've both agreed (an accepted request, or they opened your one-time QR/link, which expires in
+  30 minutes). Requests are rate limited and capped at 50 contacts. A receiver can read and
+  download what was sent to them and mark it delivered, nothing more; quotas stay with the sender.
 - **End-to-end encryption on the relay**: ECDH P-256 (sender's ephemeral key + receiver's device key)
   → HKDF-SHA-256 → AES-GCM-256 per 1 MiB chunk, unique IV (prefix ‖ file index ‖ chunk index), with
   associated data binding each chunk to its transfer. The server stores only ciphertext; file names
@@ -420,5 +438,15 @@ with mkcert), signed in with the same account.
     and send a large file. It should go device to device over the hotspot link (fast, and it doesn't use
     mobile data for the file; check `chrome://webrtc-internals` for a "host" candidate pair). The phone
     still needs mobile data for sign-in and signaling.
-16. **Dark mode + screen reader:** switch the OS to dark mode and check it's readable; try
+16. **Android ↔ iPhone, two people:** on the iPhone, sign up in Safari, then Share → Add to Home
+    Screen and open DropLink from the Home Screen (iOS only allows notifications for Home Screen web
+    apps, iOS 16.4+). On the Android phone (another account), People → Show my QR code → scan it with
+    the iPhone's Camera → "connected". Send a full-resolution photo and a 4K video from Android to
+    the iPhone, and one back. Check in Files → Downloads (iPhone) and Files → Downloads (Android)
+    that sizes match the originals exactly. Then close DropLink on the iPhone and send again: a
+    notification arrives; tap it and the file comes through.
+17. **Add by email:** one person adds the other's email; the other sees "Wants to connect" (with the
+    email) on Home → People → Accept. Remove the contact: the device disappears from Send on both
+    sides.
+18. **Dark mode + screen reader:** switch the OS to dark mode and check it's readable; try
     VoiceOver / TalkBack on Home and Send.

@@ -6,7 +6,7 @@
 // older attempts are ignored by the router in services/transfers.ts.
 
 import { TRANSFER } from '../config';
-import type { Signaling } from './signaling';
+import type { SignalBus } from './signaling';
 
 const CONNECT_TIMEOUT_MS = TRANSFER.connectTimeoutMs;
 /** "disconnected" can recover on its own (e.g. a Wi-Fi blip); give it a moment. */
@@ -23,7 +23,7 @@ export class PeerSession {
 
   constructor(
     private readonly opts: {
-      signaling: Signaling;
+      signaling: SignalBus;
       transferId: string;
       peerId: string;
       attempt: number;

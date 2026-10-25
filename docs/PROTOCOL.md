@@ -15,7 +15,16 @@ with no schema changes. The web app's implementation is the reference: file path
 
 ## Presence and signaling (Supabase Realtime)
 
-- Private channel `user:{auth.uid()}` (`config.private = true`, presence key = device id).
+- Private channel `user:{auth.uid()}` (`config.private = true`, presence key = device id) for
+  your own devices, plus one `pair:{a}:{b}` channel per accepted contact (`a` < `b` are the two
+  user ids, lowercase; same config) carrying the same events between your devices and theirs.
+  On a pair channel, drop messages whose `from` isn't one of the contact's devices, and only count
+  the contact's devices in its presence. Route each message to the channel of whoever owns `to`.
+  [`services/signaling.ts`]
+- Contacts are managed with the RPCs `my_contacts`, `request_contact(p_email)`,
+  `respond_contact(p_other, p_accept)`, `remove_contact(p_other)`, `create_contact_invite()` and
+  `accept_contact_invite(p_token)`; invite links are `/add?invite={token}`. A contact's devices
+  are readable from `devices` (filter by `user_id`).
 - Track presence `{ deviceId, name, kind }`.
 - Broadcast events `offer`, `answer`, `ice`, `transfer-request`, `transfer-accept`,
   `transfer-decline`. Every payload has `{ to, from, transferId }` (UUIDs); ignore messages where

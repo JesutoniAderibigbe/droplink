@@ -1,10 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { newDevice, uniqueEmail } from './helpers';
+import { newDevice, uniqueEmail, useOpfsFolder } from './helpers';
 
 const status = JSON.parse(
   ((s) => s.slice(s.indexOf('{')))(
@@ -32,24 +32,6 @@ async function storageObjects(uid: string, transferId: string): Promise<number> 
       `select count(*) from storage.objects where bucket_id='relay' and name like '${uid}/${transferId}/%'`,
     ),
   );
-}
-
-/** Use an OPFS directory as "the chosen download folder" (see receive-folder.spec.ts). */
-async function useOpfsFolder(page: Page) {
-  await page.evaluate(async () => {
-    const dir = await (
-      await navigator.storage.getDirectory()
-    ).getDirectoryHandle('relay-e2e', { create: true });
-    await new Promise<void>((resolve, reject) => {
-      const open = indexedDB.open('droplink-kv');
-      open.onsuccess = () => {
-        const tx = open.result.transaction('kv', 'readwrite');
-        tx.objectStore('kv').put(dir, 'download-dir');
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      };
-    });
-  });
 }
 
 test('relay: Mac fully offline, 50 MB arrives intact later, relay copy deleted', async ({

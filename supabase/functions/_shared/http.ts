@@ -74,7 +74,8 @@ export async function requireUser(req: Request): Promise<{ user: User; db: Supab
   return { user: data.user, db };
 }
 
-/** Service-role client. Bypasses RLS: only for cleanup and account deletion. */
+/** Service-role client. Bypasses RLS: only for cleanup, account deletion, and reading a
+ * target's push subscriptions after the caller has been authorized. */
 export function adminClient(): SupabaseClient {
   return createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },

@@ -1,10 +1,12 @@
-// Signed-in session: this device's identity and row, and the user's device list.
+// Signed-in session: this device's identity and row, the user's device list,
+// and the devices of accepted contacts (filled in by contacts.svelte.ts).
 // Started once per sign-in from Signed.svelte; everything else (presence,
 // receiving, push, relay inbox) hangs off `onSessionReady`.
 
 import { defaultDeviceName, detectKind } from '../core/deviceName';
 import type { DeviceRow } from '../core/types';
 import { humanError } from '../core/errors';
+import { firstName } from '../core/greeting';
 import { PRESENCE } from '../config';
 import {
   createIdentity,
@@ -23,16 +25,43 @@ export const session = $state<{
   identity: DeviceIdentity | null;
   device: DeviceRow | null;
   devices: DeviceRow[];
+  /** Active devices of accepted contacts. */
+  contactDevices: DeviceRow[];
+  /** Contact user id → display name. */
+  contactNames: Record<string, string>;
   error: string;
-}>({ phase: 'idle', userId: null, identity: null, device: null, devices: [], error: '' });
+}>({
+  phase: 'idle',
+  userId: null,
+  identity: null,
+  device: null,
+  devices: [],
+  contactDevices: [],
+  contactNames: {},
+  error: '',
+});
 
 /** Other (non-revoked) devices of this user. */
 export function otherDevices(): DeviceRow[] {
   return session.devices.filter((d) => d.id !== session.device?.id);
 }
 
+/** One of my devices or a contact's. */
 export function deviceById(id: string | null | undefined): DeviceRow | undefined {
-  return session.devices.find((d) => d.id === id);
+  return (
+    session.devices.find((d) => d.id === id) ?? session.contactDevices.find((d) => d.id === id)
+  );
+}
+
+/** Is this one of my own devices (as opposed to a contact's)? */
+export function isOwnDevice(d: DeviceRow): boolean {
+  return d.user_id === session.userId;
+}
+
+/** "Pixel 9" for my devices, "Ada · iPhone" for a contact's. */
+export function deviceLabel(d: DeviceRow): string {
+  if (isOwnDevice(d)) return d.name;
+  return `${firstName(session.contactNames[d.user_id] ?? '') || 'Someone'} · ${d.name}`;
 }
 
 const REVOKED_FLAG = 'droplink:revoked';
@@ -95,6 +124,8 @@ export function stopSession(): void {
     identity: null,
     device: null,
     devices: [],
+    contactDevices: [],
+    contactNames: {},
     error: '',
   });
 }
@@ -146,7 +177,8 @@ async function handleRevoked(userId: string): Promise<void> {
 }
 
 export async function refreshDevices(): Promise<void> {
-  session.devices = await devicesApi.listDevices();
+  if (!session.userId) return;
+  session.devices = await devicesApi.listDevices(session.userId);
   const me = session.devices.find((d) => d.id === session.device?.id);
   if (me) session.device = me;
 }

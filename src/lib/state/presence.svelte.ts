@@ -1,9 +1,10 @@
-// Reactive view of which of my devices are online, plus the shared Signaling
-// instance used by the transfer engine.
+// Reactive view of which devices are online (mine and my contacts'), plus the
+// shared SignalHub used by the transfer engine.
 
 import type { PresenceMeta } from '../core/signal';
-import { Signaling } from '../services/signaling';
+import { SignalHub } from '../services/signaling';
 import { supabase } from '../supabase';
+import { onContactsChanged, requestContactsRefresh } from './contacts.svelte';
 import { deviceById, onRenamed, onSessionReady, refreshDevices, session } from './session.svelte';
 
 export const presence = $state<{
@@ -14,12 +15,12 @@ export const presence = $state<{
   status: 'connecting',
 });
 
-let signaling: Signaling | null = null;
+let hub: SignalHub | null = null;
 const joinListeners = new Set<(deviceId: string) => void>();
 
-export function getSignaling(): Signaling {
-  if (!signaling) throw new Error('Signaling not started');
-  return signaling;
+export function getSignaling(): SignalHub {
+  if (!hub) throw new Error('Signaling not started');
+  return hub;
 }
 
 export function isOnline(deviceId: string): boolean {
@@ -33,37 +34,43 @@ export function onDeviceJoined(fn: (deviceId: string) => void): () => void {
 }
 
 onSessionReady(({ userId, device }) => {
-  const s = new Signaling(
+  const h = new SignalHub({
     supabase,
     userId,
-    { deviceId: device.id, name: device.name, kind: device.kind },
-    {
-      onPresence(online) {
-        const before = presence.online;
-        presence.online = Object.fromEntries(online);
-        for (const id of online.keys()) {
-          if (id in before) continue;
-          // A device we don't know yet (just registered, or renamed): reload the list.
-          if (!deviceById(id) || deviceById(id)?.name !== online.get(id)?.name)
-            void refreshDevices();
-          for (const fn of joinListeners) fn(id);
+    self: { deviceId: device.id, name: device.name, kind: device.kind },
+    ownerOf: (id) => deviceById(id)?.user_id,
+    onPresence(online) {
+      const before = presence.online;
+      presence.online = Object.fromEntries(online);
+      for (const [id, meta] of online) {
+        if (id in before) continue;
+        // A device we don't know yet (just registered, or renamed): reload.
+        const known = deviceById(id);
+        if (!known || known.name !== meta.name) {
+          if (!known || known.user_id === session.userId) void refreshDevices();
+          else requestContactsRefresh();
         }
-      },
-      onStatus(status) {
-        presence.status = status;
-      },
+        for (const fn of joinListeners) fn(id);
+      }
     },
-  );
-  signaling = s;
-  void s.start();
+    onStatus(status) {
+      presence.status = status;
+    },
+    onUnknownDevice: () => requestContactsRefresh(),
+  });
+  hub = h;
+  const off = onContactsChanged((ids) => h.setContacts(ids));
+  h.setContacts(Object.keys(session.contactNames));
+  void h.start();
   return () => {
-    s.stop();
-    if (signaling === s) signaling = null;
+    off();
+    h.stop();
+    if (hub === h) hub = null;
     presence.online = {};
   };
 });
 
 // Keep our presence payload in sync with renames.
 onRenamed(() => {
-  if (signaling && session.device) void signaling.updateSelf({ name: session.device.name });
+  if (hub && session.device) void hub.updateSelf({ name: session.device.name });
 });

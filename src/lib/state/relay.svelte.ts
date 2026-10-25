@@ -17,7 +17,8 @@ import {
 import { defaultSinkFactory } from '../services/sinks';
 import type { IncomingFileView, IncomingView } from '../services/transferEngine';
 import * as api from '../services/transfersApi';
-import { deviceById, onSessionReady, session } from './session.svelte';
+import { deviceById, deviceLabel, onSessionReady, session } from './session.svelte';
+import { refreshContacts } from './contacts.svelte';
 import { settings } from './settings.svelte';
 import { getSignaling } from './presence.svelte';
 import { configureEngine, recordReceivedFile, upsertIncoming } from './transfers.svelte';
@@ -81,11 +82,15 @@ configureEngine({
 const inProgress = new Set<string>();
 
 async function receiveRelayed(row: TransferRow, privateKey: CryptoKey): Promise<void> {
-  const from = deviceById(row.from_device_id);
+  let from = deviceById(row.from_device_id);
+  if (!from) {
+    await refreshContacts();
+    from = deviceById(row.from_device_id);
+  }
   const view: IncomingView = {
     id: row.id,
     fromId: row.from_device_id,
-    fromName: from?.name ?? 'Another device',
+    fromName: from ? deviceLabel(from) : 'Another device',
     via: 'relay',
     phase: 'receiving',
     fileCount: row.file_count,

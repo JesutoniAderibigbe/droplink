@@ -50,3 +50,21 @@ export async function newDevice(browser: Browser, email: string): Promise<Page> 
 export function uniqueEmail(label: string): string {
   return `${label}-${Date.now().toString(36)}@droplink.test`;
 }
+
+/** Use an OPFS directory as "the chosen download folder" (see receive-folder.spec.ts). */
+export async function useOpfsFolder(page: Page, dirName = 'relay-e2e') {
+  await page.evaluate(async (name) => {
+    const dir = await (
+      await navigator.storage.getDirectory()
+    ).getDirectoryHandle(name, { create: true });
+    await new Promise<void>((resolve, reject) => {
+      const open = indexedDB.open('droplink-kv');
+      open.onsuccess = () => {
+        const tx = open.result.transaction('kv', 'readwrite');
+        tx.objectStore('kv').put(dir, 'download-dir');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+  }, dirName);
+}

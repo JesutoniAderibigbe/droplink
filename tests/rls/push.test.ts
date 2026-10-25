@@ -183,4 +183,28 @@ describe.skipIf(!certPath || !keyPath)('notify-device', () => {
     });
     expect(error).not.toBeNull();
   });
+
+  it("pushes a contact's device, under the sender's name", async () => {
+    const { data: inv } = await a.client.rpc('create_contact_invite');
+    const { error: e1 } = await b.client.rpc('accept_contact_invite', { p_token: inv[0].token });
+    expect(e1).toBeNull();
+    await admin.from('profiles').update({ display_name: 'Ada Lovelace' }).eq('id', a.id);
+    const iphone = await addDevice(b, 'iPhone');
+    const { error: e2 } = await b.client.rpc('save_push_subscription', {
+      p_device_id: iphone,
+      p_endpoint: `https://${HOST}:${PORT}/contact/${crypto.randomUUID()}`,
+      p_p256dh: b64u(uaPublic),
+      p_auth: b64u(authSecret),
+    });
+    expect(e2).toBeNull();
+
+    const t = await addTransfer(a, phone, iphone, 5000, 2);
+    expect(await notify(a, t)).toEqual({ status: 200, body: { sent: 1, removed: 0 } });
+    const msg = received.find((m) => m.path.startsWith('/contact/'))!;
+    expect(JSON.parse(await decryptPush(msg.body))).toMatchObject({
+      transferId: t,
+      fromName: 'Ada Lovelace',
+      fileCount: 2,
+    });
+  });
 });

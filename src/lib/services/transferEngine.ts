@@ -13,9 +13,9 @@
 //      (`relay` hook), otherwise park in the outbox (phase "queued") and send
 //      automatically when the target next shows up in Presence.
 //
-// Receiving (IncomingTransfer): accept requests from our own devices, answer
-// offers, and feed data channels into a ReceiverSession, which survives
-// reconnects.
+// Receiving (IncomingTransfer): accept requests from our own devices and from
+// accepted contacts' devices, answer offers, and feed data channels into a
+// ReceiverSession, which survives reconnects.
 //
 // Everything here is plain TypeScript; state/transfers.svelte.ts turns the
 // views it emits into reactive UI state.
@@ -30,7 +30,7 @@ import { getIceServers } from './ice';
 import { sendOverChannel, TransferCancelled } from './p2pSender';
 import { ReceiverSession } from './p2pReceiver';
 import { PeerSession } from './peer';
-import type { Signaling } from './signaling';
+import type { SignalBus } from './signaling';
 import * as api from './transfersApi';
 
 // ---------------------------------------------------------------------------
@@ -97,10 +97,12 @@ export interface IncomingView {
 export type RelayOutcome = 'relayed' | 'not-eligible';
 
 export interface EngineDeps {
-  signaling: Signaling;
+  signaling: SignalBus;
   userId: string;
   self: () => DeviceRow;
   device: (id: string) => DeviceRow | undefined;
+  /** What to call a device in the UI ("Pixel 9", or "Ada · iPhone" for a contact's). */
+  label: (d: DeviceRow) => string;
   /** Reload the device list; used when a request comes from a device we don't know yet. */
   refreshDevices: () => Promise<void>;
   isOnline: (id: string) => boolean;
@@ -179,7 +181,7 @@ export class OutgoingTransfer {
     return {
       id: this.id,
       targetId: this.target.id,
-      targetName: this.deps.device(this.target.id)?.name ?? this.target.name,
+      targetName: this.deps.label(this.deps.device(this.target.id) ?? this.target),
       phase: this.phase,
       detail: this.detail,
       files: this.queue.snapshot(),
@@ -502,7 +504,7 @@ class IncomingTransfer {
     this.view = {
       id,
       fromId: from.id,
-      fromName: from.name,
+      fromName: engine.deps.label(from),
       via: 'p2p',
       phase: 'connecting',
       fileCount,
@@ -739,13 +741,14 @@ export class TransferEngine {
   private async onRequest(m: TransferRequestSignal): Promise<void> {
     if (this.finishedIncoming.has(m.transferId)) return;
     const from = await this.knownDevice(m.from);
-    if (!from) return; // not one of our (active) devices: ignore
+    if (!from) return; // not my (active) device or a contact's: ignore
     if (!this.incoming.has(m.transferId)) {
       const t = new IncomingTransfer(this, m.transferId, from, m.fileCount, m.totalBytes);
       this.incoming.set(m.transferId, t);
       t.emit('connecting');
     }
-    // Same user's device: accept automatically (that's the AirDrop part).
+    // One of my devices or an accepted contact's: accept automatically (that's
+    // the AirDrop part). Strangers can't reach us: Realtime and RLS keep them out.
     await this.deps.signaling
       .send('transfer-accept', { to: m.from, transferId: m.transferId })
       .catch(() => {});

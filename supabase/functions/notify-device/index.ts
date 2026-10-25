@@ -1,15 +1,25 @@
 // Sends a Web Push to a device that isn't online: "Toni's Pixel wants to send
 // 3 files, 24 MB". Called by the sender while it waits for the target.
 //
-// Checks: the caller is signed in (JWT verified with Auth); the transfer, the
-// sending device and the target device are all theirs (every query runs as
-// the caller, so RLS enforces ownership); only one push per transfer
-// (claim_transfer_notification). The payload is built from database values,
-// not from the request. Subscriptions that the push service reports gone
-// (404/410) are deleted.
+// Checks: the caller is signed in (JWT verified with Auth); the transfer and
+// the sending device are theirs, and the target device is theirs or an
+// accepted contact's (those queries run as the caller, so RLS decides); only
+// one push per transfer (claim_transfer_notification). Only then are the
+// target's push subscriptions read, with the service key, since they belong
+// to the other account when sending to a contact. The payload is built from
+// database values, not from the request. Subscriptions that the push service
+// reports gone (404/410) are deleted.
 
 import webpush from 'npm:web-push@3.6.7';
-import { handler, HttpError, json, readJson, requireUser, UUID_RE } from '../_shared/http.ts';
+import {
+  adminClient,
+  handler,
+  HttpError,
+  json,
+  readJson,
+  requireUser,
+  UUID_RE,
+} from '../_shared/http.ts';
 
 const publicKey = Deno.env.get('VAPID_PUBLIC_KEY');
 const privateKey = Deno.env.get('VAPID_PRIVATE_KEY');
@@ -18,7 +28,7 @@ if (publicKey && privateKey) webpush.setVapidDetails(subject, publicKey, private
 
 Deno.serve(
   handler(async (req) => {
-    const { db } = await requireUser(req);
+    const { user, db } = await requireUser(req);
     if (!publicKey || !privateKey) throw new HttpError(503, 'push_not_configured');
 
     const { transferId } = await readJson<{ transferId?: string }>(req, 512);
@@ -32,15 +42,28 @@ Deno.serve(
       .maybeSingle();
     if (!t) throw new HttpError(404, 'transfer_not_found');
 
-    // RLS again: both devices must belong to the caller, and be active.
+    // RLS again: the caller's own devices and their contacts' devices are
+    // visible, nobody else's. The sending device must be the caller's.
     const { data: devices } = await db
       .from('devices')
-      .select('id, name, revoked_at')
+      .select('id, user_id, name, revoked_at')
       .in('id', [t.from_device_id, t.to_device_id]);
     const from = devices?.find((d) => d.id === t.from_device_id);
     const to = devices?.find((d) => d.id === t.to_device_id);
-    if (!from || !to || from.revoked_at || to.revoked_at)
+    if (!from || !to || from.revoked_at || to.revoked_at || from.user_id !== user.id)
       throw new HttpError(403, 'device_not_allowed');
+
+    // To your own device it's "Pixel 9 wants to send…"; to someone else it's
+    // your name.
+    let fromName = String(from.name);
+    if (to.user_id !== user.id) {
+      const { data: me } = await db
+        .from('profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      fromName = me?.display_name?.trim() || 'Someone';
+    }
 
     const { data: claimed, error: claimError } = await db.rpc('claim_transfer_notification', {
       p_transfer_id: transferId,
@@ -48,7 +71,8 @@ Deno.serve(
     if (claimError) throw new HttpError(500, 'claim_failed');
     if (!claimed) return json(req, { sent: 0, skipped: 'already_notified_or_not_pending' });
 
-    const { data: subs } = await db
+    const admin = adminClient();
+    const { data: subs } = await admin
       .from('push_subscriptions')
       .select('id, endpoint, p256dh, auth')
       .eq('device_id', to.id);
@@ -57,7 +81,7 @@ Deno.serve(
       v: 1,
       type: 'incoming',
       transferId: t.id,
-      fromName: String(from.name).slice(0, 60),
+      fromName: fromName.slice(0, 60),
       fileCount: t.file_count,
       totalBytes: t.total_bytes,
     });
@@ -88,7 +112,7 @@ Deno.serve(
         }
       }),
     );
-    if (gone.length) await db.from('push_subscriptions').delete().in('id', gone);
+    if (gone.length) await admin.from('push_subscriptions').delete().in('id', gone);
 
     return json(req, { sent, removed: gone.length });
   }),

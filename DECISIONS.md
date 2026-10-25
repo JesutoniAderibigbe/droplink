@@ -238,3 +238,38 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
   "no name yet": Home greets without a name and asks "What should we call you?" once. The name can be
   changed any time in Settings.
 - The greeting uses the first word only ("Good morning, Jesutoni").
+
+## Sending to other people (Contacts + QR)
+
+- **How people connect:** by a one-time QR code / link (30 minutes, single use; only a SHA-256 of
+  the token is stored), or by email request + accept. Showing a code is the inviter's consent and
+  opening it is the other person's, so an invite connects immediately. Both people need accounts:
+  that keeps relay uploads encrypted to the receiver's device key, lets them get pushes, and keeps
+  quotas per person.
+- **Signaling:** one private Realtime channel per contact pair, `pair:{a}:{b}` with sorted user
+  ids, authorized by RLS on `realtime.messages` (accepted contacts only). Rejected alternatives:
+  letting contacts write into each other's `user:` channel would need read access to it too (and
+  expose own-device traffic); a single global channel would leak presence. A pair channel is
+  shared by both people's devices, so the app checks that a message's `from` belongs to the
+  contact, not to one of your own devices or a third person.
+- **`SignalHub`:** the engine and WebRTC code talk to one bus; it routes by who owns the target
+  device and merges presence. The transfer engine is unchanged apart from labels ("Ada · iPhone").
+- **Auto-accept from contacts:** like your own devices, files from accepted contacts are accepted
+  without a prompt. The gate is the contact relationship (mutual consent, removable any time).
+  A per-transfer "Accept?" prompt can be added later if people want it.
+- **What a receiver may do:** read transfers addressed to their devices, read/delete their relay
+  objects and Storage files, and move a relayed transfer to delivered/failed. Starting relays,
+  other status changes and quotas stay with the sender (enforced in the update trigger).
+- **Push:** `notify-device` authorizes with the caller's RLS view (sender's own device; target is
+  theirs or a contact's), then reads the target's push subscriptions with the service key. To
+  another person the notification uses the sender's name.
+- **Email lookup** reveals whether an address has an account. Accepted for a "people you know"
+  app, with 20 requests/hour and a 50-contact cap; the QR flow avoids emails entirely. Pending
+  requests show the requester's email so the receiver can tell who it really is (display names
+  are self-chosen).
+- **Invite links use `?invite=`**, not `?code=`: supabase-js treats `?code=` on any page as an
+  OAuth PKCE code and tries to exchange it.
+- **Quality:** nothing changes the bytes (no transcoding); e2e tests compare SHA-256 across
+  accounts for both P2P and relay.
+- **iPhone:** works in Safari; push needs the Home Screen web app (iOS 16.4+); iOS has no Web Share
+  Target, so iPhone users pick files inside DropLink.

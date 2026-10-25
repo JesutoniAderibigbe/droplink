@@ -2,13 +2,18 @@
 // to /send, and notifications open /receive, so real paths (not hashes) are
 // required. Netlify's SPA fallback serves index.html for all of them.
 
-export type Route = 'home' | 'send' | 'receive' | 'settings' | 'privacy' | 'terms' | 'notfound';
+export type Route =
+  'home' | 'send' | 'receive' | 'settings' | 'people' | 'privacy' | 'terms' | 'notfound';
 
 const routes: Record<string, Route> = {
   '/': 'home',
   '/send': 'send',
   '/receive': 'receive',
   '/settings': 'settings',
+  '/people': 'people',
+  // Contact invite links (QR codes): /add?invite=… (not ?code=, which supabase-js
+  // would try to exchange as an OAuth code)
+  '/add': 'people',
   '/privacy': 'privacy',
   '/terms': 'terms',
 };

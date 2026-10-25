@@ -24,8 +24,8 @@ echo "DENO_TLS_CA_STORE=system" >> "$TMP/functions.env"
 pkill -f "supabase functions serve" 2>/dev/null || true
 supabase functions serve --env-file "$TMP/functions.env" > "$TMP/serve.log" 2>&1 &
 SERVE_PID=$!
-CONTAINER=$(docker ps --format '{{.Names}}' | grep '^supabase_edge_runtime_' | head -1)
-for _ in $(seq 1 30); do [ -n "$CONTAINER" ] && break; sleep 1; CONTAINER=$(docker ps --format '{{.Names}}' | grep '^supabase_edge_runtime_' | head -1); done
+CONTAINER=$(docker ps --format '{{.Names}}' | grep '^supabase_edge_runtime_' | head -1 || true)
+for _ in $(seq 1 30); do [ -n "$CONTAINER" ] && break; sleep 1; CONTAINER=$(docker ps --format '{{.Names}}' | grep '^supabase_edge_runtime_' | head -1 || true); done
 sleep 3
 docker cp "$TMP/ca.pem" "$CONTAINER:/usr/local/share/ca-certificates/droplink-test-ca.crt"
 docker exec "$CONTAINER" update-ca-certificates >/dev/null

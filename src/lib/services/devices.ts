@@ -10,10 +10,25 @@ export async function fetchDevice(id: string): Promise<DeviceRow | null> {
   return data as DeviceRow | null;
 }
 
-export async function listDevices(): Promise<DeviceRow[]> {
+/** My active devices. (RLS also returns contacts' devices, hence the user filter.) */
+export async function listDevices(userId: string): Promise<DeviceRow[]> {
   const { data, error } = await supabase
     .from('devices')
     .select(columns)
+    .eq('user_id', userId)
+    .is('revoked_at', null)
+    .order('last_seen_at', { ascending: false });
+  if (error) throw error;
+  return data as DeviceRow[];
+}
+
+/** Active devices of these contacts. */
+export async function listContactDevices(userIds: string[]): Promise<DeviceRow[]> {
+  if (userIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('devices')
+    .select(columns)
+    .in('user_id', userIds)
     .is('revoked_at', null)
     .order('last_seen_at', { ascending: false });
   if (error) throw error;

@@ -2,6 +2,7 @@
   import { auth } from '../lib/state/auth.svelte';
   import { router } from '../lib/state/router.svelte';
   import { session, startSession } from '../lib/state/session.svelte';
+  import '../lib/state/contacts.svelte';
   import '../lib/state/presence.svelte';
   import '../lib/state/transfers.svelte';
   import '../lib/state/settings.svelte';
@@ -13,6 +14,7 @@
   import Settings from './Settings.svelte';
   import Send from './Send.svelte';
   import Receive from './Receive.svelte';
+  import People from './People.svelte';
 
   $effect(() => {
     const id = auth.session?.user.id;
@@ -40,6 +42,8 @@
   <Send />
 {:else if router.route === 'receive'}
   <Receive />
+{:else if router.route === 'people'}
+  <People />
 {:else}
   <main id="main" tabindex="-1" class="container stack">
     <h1>Page not found</h1>

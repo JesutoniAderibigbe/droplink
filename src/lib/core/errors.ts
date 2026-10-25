@@ -9,6 +9,12 @@ const known: [RegExp, string][] = [
   ],
   [/Password should be at least|weak_password/i, 'Use a longer password (at least 8 characters).'],
   [/Unable to validate email|invalid format/i, 'That email address looks wrong.'],
+  [/contact limit reached/i, 'That would go over the limit of 50 people. Remove someone first.'],
+  [/too many contact requests/i, 'You have sent a lot of requests. Try again in an hour.'],
+  [/too many invites/i, 'You have made a lot of QR codes recently. Try again in a bit.'],
+  [/invite_invalid/i, 'That code has expired or was already used. Ask for a new one.'],
+  [/invite_own/i, "That's your own code. Open it on the other person's phone."],
+  [/Not connected to that contact/i, "Can't reach them right now. Try again in a moment."],
   [/rate_limited/i, 'You have sent a lot of files recently. Please wait a bit and try again.'],
   [
     /quota_exceeded/i,

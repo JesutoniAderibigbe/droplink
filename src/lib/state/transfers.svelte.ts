@@ -14,7 +14,8 @@ import {
   type OutgoingView,
 } from '../services/transferEngine';
 import { getSignaling, isOnline, onDeviceJoined } from './presence.svelte';
-import { deviceById, onSessionReady, refreshDevices, session } from './session.svelte';
+import { deviceById, deviceLabel, onSessionReady, refreshDevices, session } from './session.svelte';
+import { refreshContacts } from './contacts.svelte';
 
 export interface ReceivedItem {
   transferId: string;
@@ -148,7 +149,10 @@ onSessionReady(({ userId, device }) => {
     userId,
     self: () => session.device!,
     device: deviceById,
-    refreshDevices,
+    label: deviceLabel,
+    refreshDevices: async () => {
+      await Promise.all([refreshDevices(), refreshContacts()]);
+    },
     isOnline,
     onDeviceJoined,
     sinkFactory: defaultSinkFactory(),

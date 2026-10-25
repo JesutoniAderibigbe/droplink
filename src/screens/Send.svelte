@@ -2,7 +2,14 @@
   import type { SendFile } from '../lib/core/sink';
   import type { DeviceKind } from '../lib/core/types';
   import { formatBytes, plural } from '../lib/core/format';
-  import { otherDevices, deviceById } from '../lib/state/session.svelte';
+  import {
+    otherDevices,
+    deviceById,
+    deviceLabel,
+    isOwnDevice,
+    session,
+  } from '../lib/state/session.svelte';
+  import { contacts, refreshContacts } from '../lib/state/contacts.svelte';
   import { isOnline } from '../lib/state/presence.svelte';
   import {
     transfers,
@@ -24,17 +31,38 @@
   let dragging = $state(false);
   let input: HTMLInputElement | undefined = $state();
 
-  const devices = $derived(
-    otherDevices().toSorted((a, b) => Number(isOnline(b.id)) - Number(isOnline(a.id))),
+  $effect(() => {
+    void refreshContacts();
+  });
+  const onlineFirst = (a: { id: string }, b: { id: string }) =>
+    Number(isOnline(b.id)) - Number(isOnline(a.id));
+  const mine = $derived(otherDevices().toSorted(onlineFirst));
+  // Accepted contacts with at least one device, people with someone online first.
+  const people = $derived(
+    contacts.list
+      .filter((c) => c.status === 'accepted')
+      .map((c) => ({
+        ...c,
+        devices: session.contactDevices.filter((d) => d.user_id === c.userId).toSorted(onlineFirst),
+      }))
+      .filter((p) => p.devices.length > 0)
+      .toSorted((a, b) => onlineFirst(a.devices[0], b.devices[0])),
   );
+  const devices = $derived([...mine, ...people.flatMap((p) => p.devices)]);
   let target = $state<string | null>(null);
-  // Preselect: default device, else most recently used, else the first online one.
+  // Preselect: "Send" from People (?to=their user id) picks their first online
+  // device; otherwise the default device, else most recently used, else the
+  // first online one.
   $effect(() => {
     if (target && devices.some((d) => d.id === target)) return;
+    const to = router.query.get('to');
+    const theirs = people.find((p) => p.userId === to)?.devices[0]?.id;
     const ids = devices.map((d) => d.id);
-    target = preferredTarget(ids) ?? devices.find((d) => isOnline(d.id))?.id ?? ids[0] ?? null;
+    target =
+      theirs ?? preferredTarget(ids) ?? devices.find((d) => isOnline(d.id))?.id ?? ids[0] ?? null;
   });
-  const targetName = $derived(target ? (deviceById(target)?.name ?? 'device') : '');
+  const targetDevice = $derived(target ? deviceById(target) : undefined);
+  const targetName = $derived(targetDevice ? deviceLabel(targetDevice) : '');
 
   // The send in progress on this screen (identified by its createdAt).
   let currentKey = $state<number | null>(null);
@@ -249,25 +277,38 @@
       <legend>Send to</legend>
       {#if devices.length === 0}
         <p class="muted">
-          No other devices yet. Sign in to DropLink on your other phone or computer with the same
-          account.
+          No one to send to yet. Sign in to DropLink on your other phone or computer with the same
+          account, or <a href="/people">add someone</a>.
         </p>
       {/if}
-      {#each devices as d (d.id)}
+      {#snippet option(d: (typeof devices)[number], label: string)}
         {@const online = isOnline(d.id)}
         <label class="option" class:checked={target === d.id}>
           <input type="radio" name="target" value={d.id} bind:group={target} class="sr-only" />
           <span class="tile"><Icon name={iconFor(d.kind)} size={22} /></span>
           <span class="grow">
-            <span class="block dname ellipsis">{d.name}</span>
+            <span class="block dname ellipsis">{label}</span>
             <small class="block" class:ok={online}
-              >{online ? 'Online · nearby' : 'Offline · will get a notification'}</small
+              >{online ? 'Online' : 'Offline · will get a notification'}</small
             >
           </span>
           <span class="radio" aria-hidden="true"><span></span></span>
         </label>
+      {/snippet}
+      {#if mine.length && people.length}<p class="group-label">My devices</p>{/if}
+      {#each mine as d (d.id)}
+        {@render option(d, d.name)}
       {/each}
-      {#if target}
+      {#each people as p (p.userId)}
+        <p class="group-label">{p.name || 'Contact'}</p>
+        {#each p.devices as d (d.id)}
+          {@render option(d, d.name)}
+        {/each}
+      {/each}
+      {#if devices.length}
+        <a class="add-person" href="/people"><Icon name="plus" size={16} />Add someone</a>
+      {/if}
+      {#if target && targetDevice && isOwnDevice(targetDevice)}
         <label class="always">
           <input
             type="checkbox"
@@ -511,5 +552,20 @@
       animation: none;
       display: none;
     }
+  }
+  .group-label {
+    margin: 0.75rem 0 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text-2);
+  }
+  .add-person {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+    font-weight: 600;
   }
 </style>

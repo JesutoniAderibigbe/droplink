@@ -1,5 +1,6 @@
 <script lang="ts">
   import { session, otherDevices } from '../lib/state/session.svelte';
+  import { contacts } from '../lib/state/contacts.svelte';
   import { presence, isOnline } from '../lib/state/presence.svelte';
   import { transfers } from '../lib/state/transfers.svelte';
   import { listRecentTransfers } from '../lib/services/transfersApi';
@@ -16,6 +17,13 @@
   import OutgoingCard from '../components/OutgoingCard.svelte';
 
   const others = $derived(otherDevices());
+  const people = $derived(contacts.list.filter((c) => c.status === 'accepted'));
+  const requests = $derived(contacts.list.filter((c) => c.status === 'pending' && c.incoming));
+  const peopleOnline = $derived(
+    people.filter((c) =>
+      session.contactDevices.some((d) => d.user_id === c.userId && isOnline(d.id)),
+    ).length,
+  );
   const onlineCount = $derived(others.filter((d) => d.id in presence.online).length);
   const active = $derived(
     transfers.outgoing.filter((t) => !['delivered', 'relayed', 'cancelled'].includes(t.phase)),
@@ -132,6 +140,28 @@
       <p class="num">{sentWeek === null ? '…' : formatBytes(sentWeek)}</p>
     </div>
   </div>
+
+  <a class="card people-card rise" href="/people">
+    <span class="faces" aria-hidden="true">
+      {#each people.slice(0, 3) as c (c.userId)}
+        <span class="face">{(c.name || '?').slice(0, 1).toUpperCase()}</span>
+      {:else}
+        <span class="face add"><Icon name="people" size={18} /></span>
+      {/each}
+    </span>
+    <span class="grow">
+      <span class="block strong">People</span>
+      <small class="block muted">
+        {people.length
+          ? `${plural(people.length, 'person', 'people')}${peopleOnline ? ` · ${peopleOnline} online` : ''}`
+          : 'Send to friends and family, Android or iPhone'}
+      </small>
+    </span>
+    {#if requests.length}
+      <span class="badge req">{plural(requests.length, 'request')}</span>
+    {/if}
+    <Icon name="right" size={18} />
+  </a>
 
   {#each active as t (t.id)}
     <OutgoingCard {t} />
@@ -279,5 +309,38 @@
   }
   .name-ask .error {
     margin: 0;
+  }
+  .people-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: inherit;
+    text-decoration: none;
+  }
+  .faces {
+    display: flex;
+  }
+  .face {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    margin-left: -10px;
+    border: 2px solid var(--surface);
+    font-family: var(--display);
+    font-weight: 700;
+    background: var(--accent-soft);
+    color: var(--accent-link);
+  }
+  .face:first-child {
+    margin-left: 0;
+  }
+  .strong {
+    font-weight: 600;
+  }
+  .badge.req {
+    background: var(--accent-button);
+    color: var(--accent-text);
   }
 </style>
