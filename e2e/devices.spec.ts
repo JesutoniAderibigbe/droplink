@@ -35,3 +35,17 @@ test('two browsers on one account see each other, and rename works', async ({ br
     timeout: 15_000,
   });
 });
+
+test('greets you by the name you signed up with, and you can change it', async ({ browser }) => {
+  const page = await newDevice(browser, uniqueEmail('name'));
+  await expect(page.getByText(/^Good (morning|afternoon|evening), Toni$/)).toBeVisible();
+  await expect(page.getByText('What should we call you?')).toHaveCount(0);
+
+  await page.goto('/settings');
+  await expect(page.getByLabel('Your name')).toHaveValue('Toni Tester');
+  await page.getByLabel('Your name').fill('Ada Lovelace');
+  await page.getByRole('button', { name: 'Save name' }).click();
+  await expect(page.getByText('Saved.')).toBeVisible();
+  await page.goto('/');
+  await expect(page.getByText(/^Good (morning|afternoon|evening), Ada$/)).toBeVisible();
+});

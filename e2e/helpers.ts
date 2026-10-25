@@ -15,7 +15,10 @@ export async function signIn(page: Page, email: string): Promise<void> {
 /** Same, on whatever page is showing the sign-in form. */
 export async function signInHere(page: Page, email: string): Promise<void> {
   const signUp = !created.has(email);
-  if (signUp) await page.getByRole('button', { name: 'Create an account' }).click();
+  if (signUp) {
+    await page.getByRole('button', { name: 'Create an account' }).click();
+    await page.getByLabel('Your name').fill('Toni Tester');
+  }
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(passwordFor(email));
   await page

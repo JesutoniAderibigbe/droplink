@@ -36,8 +36,17 @@ export const MIN_PASSWORD_LENGTH = 8;
  * Email + password. Email confirmation is off in Supabase, so sign-up returns a
  * session straight away and no email is ever sent.
  */
-export async function signUpWithPassword(email: string, password: string): Promise<void> {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  name: string,
+): Promise<void> {
+  // full_name becomes profiles.display_name (handle_new_user trigger).
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: name.trim() } },
+  });
   if (error) throw error;
   // With confirmations off a brand-new user gets a session. An existing email
   // gets no session (Supabase hides whether it exists), so say so plainly.

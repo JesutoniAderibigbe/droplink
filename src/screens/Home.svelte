@@ -3,7 +3,9 @@
   import { presence, isOnline } from '../lib/state/presence.svelte';
   import { transfers } from '../lib/state/transfers.svelte';
   import { listRecentTransfers } from '../lib/services/transfersApi';
-  import { supabase } from '../lib/supabase';
+  import { profile, loadProfile, saveName } from '../lib/state/profile.svelte';
+  import { greeting as greet } from '../lib/core/greeting';
+  import { humanError } from '../lib/core/errors';
   import { formatBytes, plural, timeAgo } from '../lib/core/format';
   import DeviceRadar from '../components/DeviceRadar.svelte';
   import FileThumb from '../components/FileThumb.svelte';
@@ -19,17 +21,18 @@
     transfers.outgoing.filter((t) => !['delivered', 'relayed', 'cancelled'].includes(t.phase)),
   );
 
-  // "Good evening, Toni": the profile's display name (email prefix for password accounts).
-  let name = $state('');
+  // "Good evening, Toni". Accounts made before sign-up asked for a name get a prompt.
   $effect(() => {
-    void supabase
-      .from('profiles')
-      .select('display_name')
-      .maybeSingle()
-      .then(({ data }) => (name = data?.display_name ?? ''));
+    void loadProfile();
   });
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const greeting = $derived(greet(new Date().getHours(), profile.name));
+  let nameInput = $state('');
+  let nameError = $state('');
+  function onSaveName(event: SubmitEvent) {
+    event.preventDefault();
+    nameError = '';
+    saveName(nameInput).catch((e) => (nameError = humanError(e)));
+  }
 
   // "Sent this week": delivered transfers from this device, from the database.
   let sentWeek = $state<number | null>(null);
@@ -81,11 +84,29 @@
 
   <header class="row spread head">
     <div class="grow">
-      <p class="muted hello">{greeting}{name ? `, ${name}` : ''}</p>
+      <p class="muted hello">{greeting}</p>
       <h1 class="this-device ellipsis">{session.device!.name}</h1>
     </div>
     <a class="button icon" href="/settings" aria-label="Settings"><Icon name="settings" /></a>
   </header>
+
+  {#if profile.loaded && !profile.name}
+    <form class="card name-ask rise" onsubmit={onSaveName} aria-labelledby="name-ask-title">
+      <label id="name-ask-title" for="name-ask">What should we call you?</label>
+      <div class="row">
+        <input
+          id="name-ask"
+          class="grow"
+          autocomplete="name"
+          maxlength="80"
+          placeholder="Your name"
+          bind:value={nameInput}
+        />
+        <button type="submit" class="primary" disabled={!nameInput.trim()}>Save</button>
+      </div>
+      {#if nameError}<p class="error" role="alert">{nameError}</p>{/if}
+    </form>
+  {/if}
 
   <DeviceRadar selfKind={session.device!.kind} devices={others} {isOnline} />
 
@@ -244,5 +265,19 @@
     position: sticky;
     bottom: calc(1rem + env(safe-area-inset-bottom));
     margin-top: 0.5rem;
+  }
+  .name-ask {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .name-ask label {
+    font-weight: 600;
+  }
+  .name-ask .row {
+    gap: 0.5rem;
+  }
+  .name-ask .error {
+    margin: 0;
   }
 </style>

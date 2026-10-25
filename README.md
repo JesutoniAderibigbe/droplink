@@ -13,6 +13,34 @@ AirDrop-style file sharing between **your own** devices, as an installable web a
   (and always after 24 h).
 - On desktop Chrome or Edge, files stream straight into a folder you picked once.
 
+## In simple terms
+
+Think of DropLink as a private courier between your own phone and computer.
+
+1. **You sign in on both devices with the same account.** That's how they know they belong
+   together. There's no pairing and no codes.
+2. **The devices keep an eye out for each other.** While DropLink is open, each device tells our
+   server "I'm here". That's how your phone knows your Mac is online, like a contact showing as
+   "online" in a chat app.
+3. **When you send something, the devices talk directly.** The server only introduces them (it
+   passes a few small "here's how to reach me" notes back and forth). After that, the file goes
+   straight from one device to the other, like handing it across a table. It doesn't go through our
+   server, so it's fast and private. On the same Wi-Fi, it goes at Wi-Fi speed.
+4. **If they can't reach each other directly**, for example because a network blocks it, the file
+   goes through a forwarding server (Cloudflare TURN). It's still scrambled so only your device can
+   read it.
+5. **If the other device is closed**, it gets a notification: "Your phone is sending you a file". Tap
+   it, DropLink opens, and the transfer starts.
+6. **If nobody answers**, DropLink locks the file (encrypts it with a key that only your other device
+   has) and leaves it in a locked box on the server, a bit like a parcel locker. The next time you
+   open DropLink on the other device, it collects the file, unlocks it and the box is emptied. Boxes
+   that nobody collects are cleared after 24 hours. The server can't open them.
+7. **Where files land**: on a computer, into a folder you choose once (or your Downloads folder). On
+   a phone, into Downloads. DropLink tells you exactly where to look.
+
+What the server knows: your email and name, your device names, and that a transfer happened and how
+big it was. What it never sees: what's inside your files or what they're called.
+
 ## How it works
 
 ```

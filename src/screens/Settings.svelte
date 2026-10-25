@@ -13,6 +13,7 @@
   import TopBar from '../components/TopBar.svelte';
   import Icon from '../components/Icon.svelte';
   import Orb from '../components/Orb.svelte';
+  import { profile, loadProfile, saveName } from '../lib/state/profile.svelte';
 
   let message = $state('');
   let error = $state('');
@@ -25,6 +26,16 @@
     } catch (e) {
       error = humanError(e);
     }
+  }
+
+  // Your name, for the greeting on Home.
+  let myName = $state('');
+  $effect(() => {
+    void loadProfile().then(() => (myName = profile.name));
+  });
+  function onSaveMyName(event: SubmitEvent) {
+    event.preventDefault();
+    run(() => saveName(myName), 'Saved.');
   }
 
   // This device: inline rename in the dark card.
@@ -120,6 +131,26 @@
 
   {#if message}<p class="status" role="status">{message}</p>{/if}
   {#if error}<p class="error" role="alert">{error}</p>{/if}
+
+  <form class="card your-name rise d1" onsubmit={onSaveMyName}>
+    <label class="eyebrow" for="my-name">Your name</label>
+    <div class="row">
+      <input
+        id="my-name"
+        class="grow"
+        autocomplete="name"
+        maxlength="80"
+        placeholder="Your name"
+        bind:value={myName}
+      />
+      <button
+        type="submit"
+        class="primary"
+        aria-label="Save name"
+        disabled={!myName.trim() || myName.trim() === profile.name}>Save</button
+      >
+    </div>
+  </form>
 
   <section class="card group rise d1" aria-labelledby="devices-title">
     <h2 id="devices-title" class="eyebrow">My devices</h2>
@@ -417,5 +448,13 @@
     margin: 0;
     color: var(--ok-strong);
     font-weight: 500;
+  }
+  .your-name {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .your-name .row {
+    gap: 0.5rem;
   }
 </style>

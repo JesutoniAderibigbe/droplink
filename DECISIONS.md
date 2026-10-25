@@ -229,3 +229,12 @@ transferId }` and is validated (`core/signal.ts`) before use. Devices ignore mes
 - **ICE servers are fetched when the app opens**, not when Send is pressed.
 - **Cloudflare TURN is the real fix** for networks where direct links fail. With it, devices connect in
   1–3 s and files go at full speed instead of through the relay.
+
+## Greeting by name
+
+- Sign-up asks for a name, passed as `full_name` in the user metadata. The existing
+  `handle_new_user` trigger already copies it into `profiles.display_name`, so no migration is needed.
+- Accounts created before this have the email prefix as their display name. The app treats that as
+  "no name yet": Home greets without a name and asks "What should we call you?" once. The name can be
+  changed any time in Settings.
+- The greeting uses the first word only ("Good morning, Jesutoni").

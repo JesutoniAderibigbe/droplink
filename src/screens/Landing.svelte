@@ -19,6 +19,7 @@
   void listEntries('shared').then((e) => (sharedCount = e.reduce((n, x) => n + x.files.length, 0)));
 
   let mode = $state<'signin' | 'signup'>('signin');
+  let name = $state('');
   let email = $state('');
   let password = $state('');
   let showPassword = $state(false);
@@ -42,7 +43,9 @@
     event.preventDefault();
     const addr = email.trim();
     run(() =>
-      mode === 'signup' ? signUpWithPassword(addr, password) : signInWithPassword(addr, password),
+      mode === 'signup'
+        ? signUpWithPassword(addr, password, name)
+        : signInWithPassword(addr, password),
     );
   }
 
@@ -99,6 +102,19 @@
       {/if}
 
       <form class="stack" onsubmit={onSubmit}>
+        {#if mode === 'signup'}
+          <div class="field">
+            <label class="sr-only" for="name">Your name</label>
+            <input
+              id="name"
+              autocomplete="name"
+              maxlength="80"
+              required
+              bind:value={name}
+              placeholder="Your name"
+            />
+          </div>
+        {/if}
         <div class="field">
           <label class="sr-only" for="email">Email</label>
           <input
@@ -137,6 +153,7 @@
           class="primary big go"
           disabled={busy ||
             !email ||
+            (mode === 'signup' && !name.trim()) ||
             password.length < (mode === 'signup' ? MIN_PASSWORD_LENGTH : 1)}
         >
           {mode === 'signin' ? 'Sign in' : 'Create account'}
