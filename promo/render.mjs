@@ -1,5 +1,5 @@
 // Renders index.html to frames with headless Chromium and pipes them to ffmpeg.
-//   node promo/render.mjs [--fps 60] [--stills 1,6.5,11.5] [--out promo/out]
+//   node promo/render.mjs [--fps 60] [--stills 1,6.5,11.5] [--out promo/out] [--vertical 1]
 import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
@@ -13,6 +13,10 @@ const args = Object.fromEntries(
   process.argv.slice(2).reduce((a, v, i, all) => (v.startsWith('--') ? [...a, [v.slice(2), all[i + 1]]] : a), []),
 );
 const fps = Number(args.fps ?? 60);
+// --vertical 1: the 9:16 cut (1080×1920).
+const vertical = !!args.vertical;
+const [vw, vh] = vertical ? [1080, 1920] : [1920, 1080];
+const tag = vertical ? '-vertical' : '';
 const out = args.out ?? join(here, 'out');
 mkdirSync(out, { recursive: true });
 
@@ -30,19 +34,19 @@ const server = createServer(async (req, res) => {
 const port = server.address().port;
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
-await page.goto(`http://localhost:${port}/index.html?render`);
+const page = await browser.newPage({ viewport: { width: vw, height: vh }, deviceScaleFactor: 1 });
+await page.goto(`http://localhost:${port}/index.html?render${vertical ? '&v' : ''}`);
 await page.evaluate(() => document.fonts.ready);
 const duration = await page.evaluate(() => window.DURATION);
 
 if (args.stills) {
   for (const t of args.stills.split(',').map(Number)) {
     await page.evaluate((t) => window.seek(t), t);
-    await page.screenshot({ path: join(out, `still-${t.toFixed(2)}.png`) });
+    await page.screenshot({ path: join(out, `still${tag}-${t.toFixed(2)}.png`) });
   }
 } else {
   const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '16', '-pix_fmt', 'yuv420p', join(out, 'video.mp4')], { stdio: ['pipe', 'inherit', 'inherit'] });
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', '16', '-pix_fmt', 'yuv420p', join(out, `video${tag}.mp4`)], { stdio: ['pipe', 'inherit', 'inherit'] });
   const total = Math.round(duration * fps);
   for (let f = 0; f < total; f++) {
     await page.evaluate((t) => window.seek(t), f / fps);

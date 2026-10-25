@@ -1,6 +1,7 @@
 # DropLink ad
 
-A 30-second, 1920×1080, 60 fps motion-graphics ad for DropLink, written as code.
+A 30-second, 60 fps motion-graphics ad for DropLink, written as code: 16:9 (1920×1080) and a
+9:16 vertical cut (1080×1920) from the same timeline.
 
 - `index.html`: the animation. Every frame is a pure function of time (`seek(t)`), with closed-form
   springs and no CSS transitions or timers, so it renders identically frame by frame. Open it in a
@@ -15,6 +16,7 @@ node promo/render.mjs                       # out/video.mp4 (silent)
 ffmpeg -i promo/out/video.mp4 -i promo/audio.wav -c:v copy -c:a aac -b:a 256k \
   -shortest -movflags +faststart promo/out/DropLink-ad.mp4
 node promo/render.mjs --stills 2.8,11.4,26.4  # check single frames
+node promo/render.mjs --vertical 1          # 9:16 cut → out/video-vertical.mp4 (open index.html?v to preview)
 ```
 
 ## Storyboard (one beat = 0.5 s)

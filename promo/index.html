@@ -860,6 +860,13 @@
 
     <script>
       const DURATION = 30;
+      // ?v renders the 9:16 vertical cut (1080×1920). Same timeline, portrait layout.
+      const V = new URLSearchParams(location.search).has('v');
+      const W = V ? 1080 : 1920;
+      const H = V ? 1920 : 1080;
+      const CX = W / 2;
+      const CY = H / 2;
+      if (V) document.body.classList.add('v');
       const BEAT = 0.5; // 120 BPM
 
       // ---------- math ----------
@@ -968,8 +975,8 @@
       // ---------- locker grid ----------
       const CELL = 150,
         GAP = 18,
-        GX = 1300,
-        GY = 520;
+        GX = V ? 540 : 1300,
+        GY = V ? 1300 : 520;
       const cells = [];
       for (let r = 0; r < 3; r++)
         for (let c = 0; c < 3; c++) {
@@ -996,6 +1003,42 @@
         return s;
       }
 
+      const ECX = V ? 540 : 960;
+      const ECY = V ? 740 : 380;
+      if (V) {
+        const place = (el, css) => Object.assign(el.style, css);
+        const stage_ = $('stage');
+        place(stage_, { width: '1080px', height: '1920px' });
+        place($('glow'), { left: '-60px', top: '360px' });
+        place($('brand1'), { left: '540px', top: '1000px' });
+        $('word1').style.fontSize = '170px';
+        const lines = document.querySelectorAll('#type .line');
+        [640, 800, 960].forEach((top, i) => place(lines[i], { top: top + 'px', left: '80px', fontSize: '146px' }));
+        place($('t4').closest('.abs'), { left: '84px', top: '1170px', width: '900px', fontSize: '44px' });
+        $('t4').innerHTML = "That's the whole setup.<br>No pairing.";
+        $('t4').parentElement.style.lineHeight = '1.3';
+        document.querySelectorAll('#light .cap').forEach((c) => place(c, { top: '250px', left: '60px', right: '60px', fontSize: '84px' }));
+        $('c4').innerHTML = '<span class="m"><span class="w">Straight across,</span></span><br><span class="m"><span class="w">device to device.</span></span>';
+        place($('devices'), { width: '1080px', height: '1920px', transform: 'none' });
+        place($('beamSvg'), {});
+        $('beamSvg').setAttribute('width', 1080);
+        $('beamSvg').setAttribute('height', 1920);
+        place($('laptop'), { left: '90px', top: '560px' });
+        place($('phone'), { left: '375px', top: '1220px' });
+        $('beam').setAttribute('d', 'M 560 1300 Q 1000 1080 560 840');
+        $('beamGlow').setAttribute('d', 'M 560 1300 Q 1000 1080 560 840');
+        $('linkArc').setAttribute('d', 'M 380 1330 Q 120 1180 330 1000');
+        document.querySelectorAll('#lock .lcap').forEach((c, i) => place(c, { left: '80px', top: [300, 430][i] + 'px', fontSize: '112px' }));
+        place($('l3').closest('.abs'), { left: '84px', top: '600px', width: '920px', fontSize: '38px' });
+        place($('card'), { left: '340px', top: '1050px' });
+        place($('padlock'), { left: '460px', top: '1210px' });
+        place($('clock'), { left: '540px', top: '1610px' });
+        document.querySelectorAll('.feat .ft').forEach((f) => (f.style.fontSize = '138px'));
+        place($('glow2'), { left: '40px', top: '240px' });
+        place($('logo2'), { left: '540px', top: '740px' });
+        const ends = document.querySelectorAll('#end .endword');
+        [880, 1050, 1150, 1270].forEach((top, i) => (ends[i].style.top = top + 'px'));
+      }
       const beam = $('beam');
       const beamLen = beam.getTotalLength();
       const beamGlow = $('beamGlow');
@@ -1026,13 +1069,19 @@
             arc: eOut(prog(t, 2.3, 0.45)),
             spark: spring(t, 2.52, 3, 0.5),
           });
-          ring($('r1'), t, t < 1 ? 0.5 : t < 1.5 ? 1.0 : 1.5, 960, 540, { to: 760 });
-          ring($('r2'), t, 2.0, 960, 540, { from: 200, to: 1500, dur: 1.4, alpha: 0.45 });
-          ring($('r3'), t, 2.5, 960, 540, { from: 220, to: 1900, dur: 1.6, alpha: 0.3 });
+          ring($('r1'), t, t < 1 ? 0.5 : t < 1.5 ? 1.0 : 1.5, CX, CY, { to: 760 });
+          ring($('r2'), t, 2.0, CX, CY, { from: 200, to: 1500, dur: 1.4, alpha: 0.45 });
+          ring($('r3'), t, 2.5, CX, CY, { from: 220, to: 1900, dur: 1.6, alpha: 0.3 });
           const shift = spring(t, 2.5, 2.0, 0.85);
-          S($('logo1'), { x: -330 * shift, y: 0 });
           const w = $('word1');
-          w.style.left = -330 * shift + 150 + 'px';
+          if (V) {
+            S($('logo1'), { y: -150 * shift });
+            w.style.left = -w.offsetWidth / 2 + 'px';
+            w.style.top = 40 + 'px';
+          } else {
+            S($('logo1'), { x: -330 * shift, y: 0 });
+            w.style.left = -330 * shift + 150 + 'px';
+          }
           w.style.clipPath = `inset(-20% ${100 - 100 * eOut(prog(t, 2.58, 0.42))}% -20% 0)`;
           const out = eIn(prog(t, 2.9, 0.2));
           S($('brand1'), { o: 1 - out, s: 1 + 0.08 * out, blur: 10 * out });
@@ -1053,12 +1102,12 @@
         show($('light'), lightOn);
         if (lightOn) {
           const wipe = eIO(prog(t, 5.45, 0.6));
-          $('light').style.clipPath = `circle(${1150 * wipe}px at 960px 540px)`;
+          $('light').style.clipPath = `circle(${1200 * wipe}px at ${CX}px ${CY}px)`;
 
           rise($('c1').querySelector('.w'), t, 6.6, 8.2);
           [...$('c2').querySelectorAll('.w')].forEach((el, i) => rise(el, t, 8.5 + i * 0.5, 9.8 + i * 0.04));
           [...$('c3').querySelectorAll('.w')].forEach((el, i) => rise(el, t, 10.0 + i * 0.5, 11.75 + i * 0.04));
-          rise($('c4').querySelector('.w'), t, 12.0, 14.3);
+          $('c4').querySelectorAll('.w').forEach((el, i) => rise(el, t, 12.0 + i * 0.08, 14.3));
           [...$('c5').querySelectorAll('.w')].forEach((el, i) => rise(el, t, 14.75 + i * 0.75, 17.6));
 
           // Devices arrive.
@@ -1066,8 +1115,13 @@
           const lIn = spring(t, 6.12, 1.8, 0.8);
           // Scene 5 camera: phone leaves, laptop takes centre stage.
           const cam = spring(t, 14.45, 1.6, 0.86);
-          S($('phone'), { y: 520 * (1 - pIn), r: -6 * (1 - pIn), x: -760 * cam, o: clamp(pIn * 2) });
-          S($('laptop'), { y: 480 * (1 - lIn) + 40 * cam, x: -310 * cam, s: 1 + 0.12 * cam, o: clamp(lIn * 2) });
+          if (V) {
+            S($('phone'), { y: 520 * (1 - pIn) + 900 * cam, r: -6 * (1 - pIn), o: clamp(pIn * 2) });
+            S($('laptop'), { y: -480 * (1 - lIn) + 200 * cam, s: 1 + 0.1 * cam, o: clamp(lIn * 2) });
+          } else {
+            S($('phone'), { y: 520 * (1 - pIn), r: -6 * (1 - pIn), x: -760 * cam, o: clamp(pIn * 2) });
+            S($('laptop'), { y: 480 * (1 - lIn) + 40 * cam, x: -310 * cam, s: 1 + 0.12 * cam, o: clamp(lIn * 2) });
+          }
 
           // Phone screens.
           const toSend = eIO(prog(t, 10.0, 0.45));
@@ -1169,7 +1223,7 @@
         show($('lock'), lockOn);
         if (lockOn) {
           const up = eIO(prog(t, 17.8, 0.45));
-          $('lock').style.transform = `translateY(${1080 * (1 - up)}px)`;
+          $('lock').style.transform = `translateY(${H * (1 - up)}px)`;
           rise($('l1'), t, 18.3);
           rise($('l2'), t, 19.0);
           rise($('l3'), t, 20.4);
@@ -1212,7 +1266,7 @@
             const el = featEls[i];
             const p = spring(t, f.t, 3.2, 0.92);
             el.style.display = t >= f.t ? '' : 'none';
-            const dy = 1080 * (1 - p);
+            const dy = H * (1 - p);
             el.style.transform = `translateY(${Math.abs(dy) < 8 ? 0 : dy}px)`;
             const txt = el.querySelector('.ft');
             const ic = el.querySelector('svg');
@@ -1235,9 +1289,9 @@
             arc: eOut(prog(t, 25.45, 0.45)),
             spark: spring(t, 25.65, 3, 0.5),
           });
-          ring($('e1'), t, 25.15, 960, 380, { from: 200, to: 1600, dur: 1.5, alpha: 0.5 });
-          ring($('e2'), t, lastBeat(t, 26.0, 2), 960, 380, { from: 220, to: 900, dur: 1.4, alpha: 0.35 });
-          ring($('e3'), t, lastBeat(t, 27.0, 2), 960, 380, { from: 220, to: 900, dur: 1.4, alpha: 0.35 });
+          ring($('e1'), t, 25.15, ECX, ECY, { from: 200, to: 1600, dur: 1.5, alpha: 0.5 });
+          ring($('e2'), t, lastBeat(t, 26.0, 2), ECX, ECY, { from: 220, to: 900, dur: 1.4, alpha: 0.35 });
+          ring($('e3'), t, lastBeat(t, 27.0, 2), ECX, ECY, { from: 220, to: 900, dur: 1.4, alpha: 0.35 });
           rise($('ew'), t, 25.6);
           rise($('et'), t, 26.1);
           const u = spring(t, 26.6, 2.2, 0.8);
@@ -1256,8 +1310,8 @@
       // ---------- player ----------
       const stage = $('stage');
       function fit() {
-        const s = Math.min(innerWidth / 1920, innerHeight / 1080);
-        stage.style.transform = `translate(${(innerWidth - 1920 * s) / 2}px,${(innerHeight - 1080 * s) / 2}px) scale(${s})`;
+        const s = Math.min(innerWidth / W, innerHeight / H);
+        stage.style.transform = `translate(${(innerWidth - W * s) / 2}px,${(innerHeight - H * s) / 2}px) scale(${s})`;
       }
       const render = new URLSearchParams(location.search).has('render');
       if (render) {
