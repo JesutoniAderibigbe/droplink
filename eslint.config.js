@@ -6,7 +6,9 @@ import globals from 'globals';
 import svelteConfig from './svelte.config.js';
 
 export default ts.config(
-  { ignores: ['dist', 'dev-dist', 'node_modules', 'supabase/functions', 'supabase/.temp', 'promo'] },
+  {
+    ignores: ['dist', 'dev-dist', 'node_modules', 'supabase/functions', 'supabase/.temp', 'promo'],
+  },
   js.configs.recommended,
   ...ts.configs.recommended,
   ...svelte.configs.recommended,
