@@ -1,0 +1,1315 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DropLink Ad</title>
+    <style>
+      @font-face {
+        font-family: Geist;
+        src: url(fonts/geist.woff2) format('woff2');
+        font-weight: 100 900;
+      }
+      @font-face {
+        font-family: Bricolage;
+        src: url(fonts/bricolage.woff2) format('woff2');
+        font-weight: 200 800;
+      }
+      :root {
+        --bg: #f3f4f6;
+        --ink: #111318;
+        --text2: #5b606b;
+        --accent: #e8400f;
+        --dark: #0d0e11;
+        --ok: #0e8a43;
+        --border: #e6e8ec;
+        --track: #eef0f3;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+      }
+      #stage {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        transform-origin: 0 0;
+        font-family: Geist, system-ui, sans-serif;
+        color: var(--ink);
+        background: var(--dark);
+        -webkit-font-smoothing: antialiased;
+      }
+      .layer {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+      .abs {
+        position: absolute;
+      }
+      .display {
+        font-family: Bricolage, Geist, sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.035em;
+      }
+      .m {
+        display: inline-block;
+        overflow: hidden;
+        vertical-align: bottom;
+        padding: 0.04em 0.02em 0.12em;
+        margin: -0.04em -0.02em -0.12em;
+      }
+      .w {
+        display: inline-block;
+        will-change: auto;
+      }
+      .o {
+        color: var(--accent);
+      }
+
+      /* Logo */
+      .logo {
+        position: absolute;
+        width: 0;
+        height: 0;
+      }
+      .logo .lbox {
+        position: absolute;
+        background: var(--accent);
+      }
+      .logo svg {
+        position: absolute;
+        overflow: visible;
+      }
+
+      /* Rings */
+      .ring {
+        position: absolute;
+        border-radius: 50%;
+        border: 2px solid var(--accent);
+      }
+
+      /* Kinetic type */
+      #type .line {
+        position: absolute;
+        left: 200px;
+        font-size: 176px;
+        line-height: 1;
+        color: #fff;
+      }
+
+      /* Light scenes */
+      #light {
+        background: var(--bg);
+      }
+      .cap {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 92px;
+        text-align: center;
+        font-size: 76px;
+        line-height: 1.05;
+      }
+      .phone {
+        position: absolute;
+        left: 360px;
+        top: 292px;
+        width: 330px;
+        height: 680px;
+        border-radius: 56px;
+        background: #15171c;
+        box-shadow:
+          0 40px 80px rgba(17, 19, 24, 0.18),
+          0 8px 20px rgba(17, 19, 24, 0.12);
+      }
+      .phone .scr {
+        position: absolute;
+        inset: 12px;
+        border-radius: 44px;
+        background: var(--bg);
+        overflow: hidden;
+      }
+      .panel {
+        position: absolute;
+        inset: 0;
+      }
+      .sb {
+        position: absolute;
+        top: 16px;
+        left: 30px;
+        right: 26px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .notch {
+        position: absolute;
+        top: 14px;
+        left: 50%;
+        width: 22px;
+        height: 22px;
+        margin-left: -11px;
+        border-radius: 50%;
+        background: #15171c;
+      }
+      .muted {
+        color: var(--text2);
+      }
+      .btn {
+        position: absolute;
+        left: 20px;
+        right: 20px;
+        bottom: 26px;
+        height: 56px;
+        border-radius: 28px;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 650;
+        font-size: 17px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 12px 26px rgba(232, 64, 15, 0.32);
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(17, 19, 24, 0.08);
+        white-space: nowrap;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--ok);
+      }
+      .row {
+        position: absolute;
+        left: 20px;
+        right: 20px;
+        height: 72px;
+        border-radius: 18px;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 12px;
+        box-shadow: 0 1px 2px rgba(17, 19, 24, 0.04);
+      }
+      .thumb {
+        flex: none;
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .t-photo {
+        background: linear-gradient(160deg, #ffb36b 0%, #ff6a3d 45%, #8a2a7a 100%);
+      }
+      .t-photo::after {
+        content: '';
+        position: absolute;
+        left: 13px;
+        top: 20px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #ffe7a8;
+        box-shadow: 0 0 12px #ffe7a8;
+      }
+      .t-photo::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 14px;
+        background: #3b1440;
+        z-index: 1;
+      }
+      .t-pdf {
+        background: #ffede5;
+        color: var(--accent);
+      }
+      .t-vid {
+        background: var(--ink);
+      }
+      .t-vid::after {
+        content: '';
+        border-left: 14px solid #fff;
+        border-top: 9px solid transparent;
+        border-bottom: 9px solid transparent;
+        margin-left: 4px;
+      }
+      .t-audio {
+        background: #e7f0ff;
+        color: #2d5bd7;
+      }
+      .fname {
+        font-size: 15px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .fsize {
+        font-size: 13px;
+        color: var(--text2);
+        margin-top: 2px;
+      }
+
+      .laptop {
+        position: absolute;
+        left: 820px;
+        top: 300px;
+        width: 900px;
+        height: 600px;
+      }
+      .laptop .lid {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 900px;
+        height: 566px;
+        border-radius: 26px 26px 6px 6px;
+        background: #15171c;
+        box-shadow: 0 40px 90px rgba(17, 19, 24, 0.16);
+      }
+      .laptop .lscr {
+        position: absolute;
+        left: 16px;
+        top: 16px;
+        right: 16px;
+        bottom: 16px;
+        border-radius: 12px;
+        background: var(--bg);
+        overflow: hidden;
+      }
+      .laptop .base {
+        position: absolute;
+        left: -60px;
+        top: 562px;
+        width: 1020px;
+        height: 30px;
+        border-radius: 4px 4px 22px 22px;
+        background: linear-gradient(#d9dce2, #b7bbc4);
+      }
+      .laptop .base::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        width: 150px;
+        margin-left: -75px;
+        height: 9px;
+        border-radius: 0 0 10px 10px;
+        background: #a3a7b0;
+      }
+      .mtop {
+        position: absolute;
+        left: 28px;
+        right: 28px;
+        top: 22px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: Bricolage, Geist;
+        font-weight: 700;
+        font-size: 21px;
+      }
+      .mrow {
+        position: absolute;
+        left: 90px;
+        right: 90px;
+        height: 76px;
+        border-radius: 18px;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 0 16px;
+        box-shadow: 0 1px 2px rgba(17, 19, 24, 0.04);
+      }
+      .bar {
+        position: relative;
+        height: 8px;
+        border-radius: 4px;
+        background: var(--track);
+        overflow: hidden;
+        margin-top: 8px;
+      }
+      .bar i {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        border-radius: 4px;
+        background: var(--accent);
+      }
+      .okc {
+        flex: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--ok);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .desk {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(120% 90% at 20% 0%, #3a2a4a 0%, transparent 60%),
+          radial-gradient(90% 80% at 100% 100%, #5a2412 0%, transparent 60%), #17141c;
+      }
+      .menubar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 0 16px;
+        gap: 18px;
+      }
+      .notif {
+        position: absolute;
+        right: 16px;
+        top: 40px;
+        width: 380px;
+        height: 82px;
+        border-radius: 18px;
+        background: rgba(246, 246, 248, 0.94);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 14px;
+      }
+      .win {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 560px;
+        height: 330px;
+        margin: -150px 0 0 -280px;
+        border-radius: 16px;
+        background: var(--bg);
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
+        overflow: hidden;
+      }
+      .cursor {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 30px;
+        height: 30px;
+        z-index: 10;
+      }
+      .ripple {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(17, 19, 24, 0.25);
+      }
+
+      /* Lock scene */
+      #lock {
+        background: var(--dark);
+      }
+      .lcap {
+        position: absolute;
+        left: 200px;
+        font-size: 104px;
+        line-height: 1;
+        color: #fff;
+      }
+      .card {
+        position: absolute;
+        left: 1100px;
+        top: 270px;
+        width: 400px;
+        height: 500px;
+        border-radius: 30px;
+        background: #fff;
+        overflow: hidden;
+      }
+      .card .ph {
+        position: absolute;
+        left: 18px;
+        right: 18px;
+        top: 18px;
+        height: 340px;
+        border-radius: 18px;
+        background: linear-gradient(160deg, #ffb36b 0%, #ff6a3d 45%, #8a2a7a 100%);
+        overflow: hidden;
+      }
+      .card .ph::after {
+        content: '';
+        position: absolute;
+        left: 128px;
+        top: 120px;
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        background: #ffe7a8;
+        box-shadow: 0 0 40px #ffe7a8;
+      }
+      .card .ph::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 64px;
+        background: #3b1440;
+        z-index: 1;
+      }
+      .hex {
+        position: absolute;
+        inset: 0;
+        padding: 26px 22px;
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 28px;
+        line-height: 38px;
+        letter-spacing: 4px;
+        color: var(--accent);
+        background: #17191f;
+        white-space: pre;
+        word-break: break-all;
+        z-index: 2;
+      }
+      .cell {
+        position: absolute;
+        width: 150px;
+        height: 150px;
+        border-radius: 22px;
+        border: 2px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .door {
+        position: absolute;
+        inset: -2px;
+        border-radius: 22px;
+        background: #23262e;
+        border: 2px solid rgba(255, 255, 255, 0.18);
+        transform-origin: 0 50%;
+      }
+      .door::after {
+        content: '';
+        position: absolute;
+        right: 18px;
+        top: 50%;
+        width: 8px;
+        height: 34px;
+        margin-top: -17px;
+        border-radius: 4px;
+        background: var(--accent);
+      }
+
+      /* Feature cards */
+      .feat {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 48px;
+      }
+      .feat .ft {
+        font-size: 150px;
+        line-height: 1;
+        text-align: center;
+      }
+      .feat svg {
+        width: 150px;
+        height: 150px;
+      }
+
+      /* End */
+      #end {
+        background: #0d0e11;
+      }
+      .endword {
+        position: absolute;
+        left: 0;
+        right: 0;
+        text-align: center;
+        color: #fff;
+      }
+      .pill {
+        display: inline-block;
+        padding: 16px 34px;
+        border-radius: 999px;
+        border: 2px solid var(--accent);
+        color: #ff8a5c;
+        font-size: 30px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
+      /* Player chrome (hidden when rendering) */
+      #ui {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 10px 16px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+        color: #fff;
+        font: 13px Geist, system-ui;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      body:hover #ui {
+        opacity: 1;
+      }
+      #ui button {
+        background: var(--accent);
+        color: #fff;
+        border: 0;
+        border-radius: 999px;
+        padding: 8px 16px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      #ui input {
+        flex: 1;
+        accent-color: var(--accent);
+      }
+      .render #ui {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <!-- Ambient glow behind the dark scenes, pulses with the kick -->
+      <div class="layer" id="base">
+        <div
+          class="abs"
+          id="glow"
+          style="
+            left: 360px;
+            top: -60px;
+            width: 1200px;
+            height: 1200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(232, 64, 15, 0.32), rgba(232, 64, 15, 0) 62%);
+          "
+        ></div>
+      </div>
+
+      <!-- 1. Beacon → logo -->
+      <div class="layer" id="beacon">
+        <div class="ring" id="r1"></div>
+        <div class="ring" id="r2"></div>
+        <div class="ring" id="r3"></div>
+        <div class="abs" id="brand1" style="left: 960px; top: 540px">
+          <div class="logo" id="logo1"></div>
+          <div
+            class="abs display"
+            id="word1"
+            style="left: 0; top: -84px; font-size: 168px; line-height: 1; color: #fff; white-space: nowrap"
+          >
+            DropLink
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Kinetic type -->
+      <div class="layer" id="type">
+        <div class="line display" style="top: 170px"><span class="m"><span class="w" id="t1">Your phone.</span></span></div>
+        <div class="line display" style="top: 370px"><span class="m"><span class="w" id="t2">Your laptop.</span></span></div>
+        <div class="line display o" style="top: 570px"><span class="m"><span class="w" id="t3">One account.</span></span></div>
+        <div class="abs" style="left: 206px; top: 820px; font-size: 46px; color: #a7abb4; font-weight: 500">
+          <span class="m"><span class="w" id="t4">That's the whole setup. No pairing.</span></span>
+        </div>
+      </div>
+
+      <!-- 3–5. Devices on the light canvas -->
+      <div class="layer" id="light">
+        <div class="cap display" id="c1"><span class="m"><span class="w">They find each other.</span></span></div>
+        <div class="cap display" id="c2">
+          <span class="m"><span class="w">No pairing.</span></span>
+          <span class="m"><span class="w">No cables.</span></span>
+          <span class="m"><span class="w o">No codes.</span></span>
+        </div>
+        <div class="cap display" id="c3">
+          <span class="m"><span class="w">Pick.</span></span>
+          <span class="m"><span class="w">Tap.</span></span>
+          <span class="m"><span class="w o">Beam.</span></span>
+        </div>
+        <div class="cap display" id="c4"><span class="m"><span class="w">Straight across, device to device.</span></span></div>
+        <div class="cap display" id="c5">
+          <span class="m"><span class="w">Laptop asleep?</span></span>
+          <span class="m"><span class="w">It gets a <span class="o">nudge.</span></span></span>
+        </div>
+
+        <div class="abs" id="devices" style="left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 960px 640px; transform: translate(-110px, -6px) scale(1.1)">
+          <svg class="abs" id="beamSvg" width="1920" height="1080" style="left: 0; top: 0; overflow: visible">
+            <defs>
+              <linearGradient id="beamGrad" x1="0" x2="1">
+                <stop offset="0" stop-color="#ff8a5c" />
+                <stop offset="1" stop-color="#e8400f" />
+              </linearGradient>
+            </defs>
+            <path id="linkArc" d="M 560 520 Q 915 230 1270 470" fill="none" stroke="#e8400f" stroke-width="3" stroke-dasharray="2 12" stroke-linecap="round" />
+            <path id="beam" d="M 560 760 Q 915 120 1270 560" fill="none" stroke="url(#beamGrad)" stroke-width="6" stroke-linecap="round" />
+            <path id="beamGlow" d="M 560 760 Q 915 120 1270 560" fill="none" stroke="#ff8a5c" stroke-width="22" stroke-linecap="round" opacity=".18" />
+          </svg>
+
+          <div class="phone" id="phone">
+            <div class="scr">
+              <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+              <div class="notch"></div>
+              <!-- Home: radar -->
+              <div class="panel" id="pHome">
+                <div class="abs muted" style="left: 24px; top: 62px; font-size: 15px">Good morning, Jesutoni</div>
+                <div class="abs display" style="left: 24px; top: 84px; font-size: 32px">Pixel 9</div>
+                <div class="abs" id="radar" style="left: 153px; top: 330px; width: 0; height: 0">
+                  <div class="abs" style="left: -125px; top: -125px; width: 250px; height: 250px; border-radius: 50%; border: 1.5px solid #e1e4e9"></div>
+                  <div class="abs" style="left: -85px; top: -85px; width: 170px; height: 170px; border-radius: 50%; border: 1.5px solid #e1e4e9"></div>
+                  <div class="abs" style="left: -45px; top: -45px; width: 90px; height: 90px; border-radius: 50%; border: 1.5px solid #e1e4e9"></div>
+                  <div class="abs" id="sweep" style="left: -125px; top: -125px; width: 250px; height: 250px; border-radius: 50%; background: conic-gradient(from 0deg, rgba(232, 64, 15, 0.22), rgba(232, 64, 15, 0) 70deg, transparent)"></div>
+                  <div class="abs" style="left: -11px; top: -11px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 4px solid #fff; box-shadow: 0 2px 8px rgba(232, 64, 15, 0.4)"></div>
+                  <div class="abs" id="macDot" style="left: 52px; top: -98px; width: 0; height: 0">
+                    <div class="abs" style="left: -21px; top: -21px; width: 42px; height: 42px; border-radius: 50%; background: var(--ink); display: flex; align-items: center; justify-content: center">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="11" rx="1.5" /><path d="M2 19h20" /></svg>
+                    </div>
+                    <div class="abs chip" style="left: -62px; top: 28px"><span class="dot"></span>MacBook Air</div>
+                  </div>
+                </div>
+                <div class="abs" style="left: 20px; right: 20px; top: 500px; display: flex; gap: 10px">
+                  <div style="flex: 1; background: #fff; border-radius: 18px; padding: 12px 14px">
+                    <div class="muted" style="font-size: 12px">Online</div>
+                    <div class="display" style="font-size: 26px" id="onlineN">0</div>
+                  </div>
+                  <div style="flex: 1; background: #fff; border-radius: 18px; padding: 12px 14px">
+                    <div class="muted" style="font-size: 12px">Sent this week</div>
+                    <div class="display" style="font-size: 26px">1.2 GB</div>
+                  </div>
+                </div>
+                <div class="btn">Send files</div>
+              </div>
+              <!-- Send -->
+              <div class="panel" id="pSend">
+                <div class="abs muted" style="left: 24px; top: 62px; font-size: 15px">Send to</div>
+                <div class="abs display" style="left: 24px; top: 84px; font-size: 30px">MacBook Air</div>
+                <div class="row" style="top: 150px"><div class="thumb t-photo"></div><div><div class="fname">Lagos-sunset.jpg</div><div class="fsize">4.2 MB</div></div></div>
+                <div class="row" style="top: 232px"><div class="thumb t-pdf">PDF</div><div><div class="fname">Pitch-deck.pdf</div><div class="fsize">8.7 MB</div></div></div>
+                <div class="row" style="top: 314px"><div class="thumb t-vid"></div><div><div class="fname">Launch-demo.mov</div><div class="fsize">41.1 MB</div></div></div>
+                <div class="abs muted" style="left: 24px; top: 404px; font-size: 14px">3 files · 54 MB</div>
+                <div class="btn" id="sendBtn">Send to MacBook Air</div>
+                <div class="ripple" id="tap"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="laptop" id="laptop">
+            <div class="base"></div>
+            <div class="lid">
+              <div class="lscr">
+                <!-- Ready -->
+                <div class="mtop"><div class="logo" id="logoM" style="left: 14px; top: 14px"></div><span style="margin-left: 34px">DropLink</span></div>
+                <div class="panel" id="mReady">
+                  <div class="abs" id="orb" style="left: 434px; top: 200px; width: 0; height: 0">
+                    <div class="abs" id="orbHalo" style="left: -90px; top: -90px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(232, 64, 15, 0.22), rgba(232, 64, 15, 0) 70%)"></div>
+                    <div class="abs" style="left: -48px; top: -48px; width: 96px; height: 96px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff9d73, #e8400f 60%, #b8300a)"></div>
+                  </div>
+                  <div class="abs display" style="left: 0; right: 0; top: 280px; text-align: center; font-size: 44px">Ready to receive</div>
+                  <div class="abs muted" style="left: 0; right: 0; top: 340px; text-align: center; font-size: 18px">Files from your devices land in Downloads/DropLink</div>
+                  <div class="abs" style="left: 0; right: 0; top: 400px; text-align: center">
+                    <span class="chip" style="font-size: 15px; padding: 9px 16px"><span class="dot" id="pixDot" style="background: #b9bdc6"></span><span id="pixLabel">Pixel 9 · offline</span></span>
+                  </div>
+                </div>
+                <!-- Receiving -->
+                <div class="panel" id="mRecv">
+                  <div class="abs" style="left: 90px; top: 92px; display: flex; align-items: center; gap: 14px">
+                    <div class="okc" id="allOk" style="width: 40px; height: 40px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></div>
+                    <div class="display" style="font-size: 38px; position: relative; height: 46px; width: 600px">
+                      <span class="abs" id="recvT1" style="white-space: nowrap">Receiving from Pixel 9</span>
+                      <span class="abs" id="recvT2" style="white-space: nowrap">Everything arrived.</span>
+                    </div>
+                  </div>
+                  <div class="mrow" style="top: 168px"><div class="thumb t-photo"></div><div style="flex: 1"><div class="fname">Lagos-sunset.jpg</div><div class="bar"><i id="b0"></i></div></div><div class="okc" id="k0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></div></div>
+                  <div class="mrow" style="top: 256px"><div class="thumb t-pdf">PDF</div><div style="flex: 1"><div class="fname">Pitch-deck.pdf</div><div class="bar"><i id="b1"></i></div></div><div class="okc" id="k1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></div></div>
+                  <div class="mrow" style="top: 344px"><div class="thumb t-vid"></div><div style="flex: 1"><div class="fname">Launch-demo.mov</div><div class="bar"><i id="b2"></i></div></div><div class="okc" id="k2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></div></div>
+                  <div class="abs" style="left: 92px; right: 92px; top: 446px; display: flex; justify-content: space-between; font-size: 17px">
+                    <span style="display: flex; align-items: center; gap: 8px; font-weight: 600"><span class="dot"></span>Direct · same network</span>
+                    <span class="muted" id="mbCount">0 MB of 54 MB</span>
+                  </div>
+                </div>
+                <!-- Asleep: desktop + notification -->
+                <div class="panel" id="mSleep">
+                  <div class="desk"></div>
+                  <div class="menubar"><span>Wi-Fi</span><span>Mon 9:41</span></div>
+                  <div class="notif" id="notif">
+                    <div class="logo" id="logoN" style="left: 34px; top: 41px"></div>
+                    <div style="margin-left: 46px; flex: 1">
+                      <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: 700"><span>DropLink</span><span class="muted" style="font-weight: 500; font-size: 13px">now</span></div>
+                      <div style="font-size: 15px; margin-top: 3px">Pixel 9 is sending you 2 files</div>
+                    </div>
+                  </div>
+                  <div class="win" id="win">
+                    <div class="mtop" style="font-size: 18px; top: 18px"><div class="logo" id="logoW" style="left: 12px; top: 12px"></div><span style="margin-left: 30px">DropLink</span></div>
+                    <div class="abs" style="left: 28px; top: 70px; display: flex; align-items: center; gap: 12px">
+                      <div class="okc" id="winOk" style="width: 34px; height: 34px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></div>
+                      <span class="display" style="font-size: 30px">2 files arrived</span>
+                    </div>
+                    <div class="mrow" style="left: 28px; right: 28px; top: 128px; height: 66px"><div class="thumb t-pdf">PDF</div><div><div class="fname">Boarding-pass.pdf</div><div class="fsize">Downloads/DropLink</div></div></div>
+                    <div class="mrow" style="left: 28px; right: 28px; top: 204px; height: 66px"><div class="thumb t-audio">♪</div><div><div class="fname">Voice-note.m4a</div><div class="fsize">Downloads/DropLink</div></div></div>
+                  </div>
+                  <div class="ripple" id="clickR"></div>
+                  <svg class="cursor" id="cursor" viewBox="0 0 24 24"><path d="M4 2.5v17.2l4.7-4.4 3 6.7 3.1-1.4-3-6.6 6.5-.3z" fill="#111318" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" /></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Files riding the beam -->
+          <div class="abs" id="fly0" style="left: 0; top: 0"><div class="thumb t-photo" style="width: 64px; height: 64px; border-radius: 16px; margin: -32px; box-shadow: 0 12px 28px rgba(232, 64, 15, 0.35)"></div></div>
+          <div class="abs" id="fly1" style="left: 0; top: 0"><div class="thumb t-pdf" style="width: 64px; height: 64px; border-radius: 16px; margin: -32px; font-size: 15px; box-shadow: 0 12px 28px rgba(232, 64, 15, 0.35)">PDF</div></div>
+          <div class="abs" id="fly2" style="left: 0; top: 0"><div class="thumb t-vid" style="width: 64px; height: 64px; border-radius: 16px; margin: -32px; box-shadow: 0 12px 28px rgba(17, 19, 24, 0.35)"></div></div>
+        </div>
+      </div>
+
+      <!-- 6. Encrypted relay -->
+      <div class="layer" id="lock">
+        <div class="lcap display" style="top: 290px"><span class="m"><span class="w" id="l1">Nobody home?</span></span></div>
+        <div class="lcap display" style="top: 420px"><span class="m"><span class="w o" id="l2">It waits, locked.</span></span></div>
+        <div class="abs" style="left: 204px; top: 590px; width: 640px; font-size: 34px; line-height: 1.35; color: #a7abb4">
+          <span class="m"><span class="w" id="l3">End-to-end encrypted.</span></span><br />
+          <span class="m"><span class="w" id="l4">Only your other device has the key.</span></span>
+        </div>
+        <div id="cells"></div>
+        <div class="card" id="card">
+          <div class="ph"></div>
+          <div class="abs" style="left: 26px; top: 384px; font-size: 28px; font-weight: 650">Lagos-sunset.jpg</div>
+          <div class="abs muted" style="left: 26px; top: 428px; font-size: 22px">4.2 MB</div>
+          <div class="hex" id="hex"></div>
+        </div>
+        <svg class="abs" id="padlock" viewBox="0 0 120 140" width="160" height="187" style="left: 1220px; top: 440px; overflow: visible">
+          <path id="shackle" d="M30 66V44a30 30 0 0 1 60 0v22" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" />
+          <rect x="12" y="62" width="96" height="74" rx="18" fill="#e8400f" />
+          <circle cx="60" cy="94" r="9" fill="#fff" />
+          <rect x="56" y="98" width="8" height="18" rx="4" fill="#fff" />
+        </svg>
+        <div class="abs" id="clock" style="left: 1300px; top: 846px">
+          <div class="chip" style="background: #1c1f26; color: #e4e6ea; font-size: 22px; padding: 12px 22px; transform: translateX(-50%)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff8a5c" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+            Deleted after pickup, or in 24 h
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Feature beats -->
+      <div class="layer" id="feats"></div>
+
+      <!-- 8. End card -->
+      <div class="layer" id="end">
+        <div class="abs" id="glow2" style="left: 460px; top: 0; width: 1000px; height: 1000px; border-radius: 50%; background: radial-gradient(circle, rgba(232, 64, 15, 0.3), rgba(232, 64, 15, 0) 62%)"></div>
+        <div class="ring" id="e1"></div>
+        <div class="ring" id="e2"></div>
+        <div class="ring" id="e3"></div>
+        <div class="logo" id="logo2" style="left: 960px; top: 380px"></div>
+        <div class="endword display" style="top: 520px; font-size: 140px; line-height: 1"><span class="m"><span class="w" id="ew">DropLink</span></span></div>
+        <div class="endword" style="top: 690px; font-size: 40px; color: #c9ccd3; font-weight: 500"><span class="m"><span class="w" id="et">Your files, beamed across.</span></span></div>
+        <div class="endword" style="top: 790px"><span class="pill" id="eu">droplink-app-m8bs.netlify.app</span></div>
+        <div class="endword" style="top: 900px; font-size: 22px; color: #6f7480; letter-spacing: 0.08em; font-weight: 600" id="ep">ANDROID · MAC · WINDOWS · ANY BROWSER</div>
+      </div>
+    </div>
+
+    <div id="ui">
+      <button id="play">Play</button>
+      <span id="time">0.00</span>
+      <input id="scrub" type="range" min="0" max="30" step="0.01" value="0" aria-label="Scrub" />
+    </div>
+
+    <script>
+      const DURATION = 30;
+      const BEAT = 0.5; // 120 BPM
+
+      // ---------- math ----------
+      const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+      const lerp = (a, b, p) => a + (b - a) * p;
+      const prog = (t, t0, d) => clamp((t - t0) / d);
+      const eOut = (p) => 1 - Math.pow(1 - p, 3);
+      const eIn = (p) => p * p * p;
+      const eIO = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+      const expoOut = (p) => (p >= 1 ? 1 : 1 - Math.pow(2, -10 * p));
+      // Closed-form damped spring step response: 0 before t0, settles at 1.
+      function spring(t, t0, f = 2.4, z = 0.78) {
+        const x = t - t0;
+        if (x <= 0) return 0;
+        const w = 2 * Math.PI * f;
+        const wd = w * Math.sqrt(1 - z * z);
+        return 1 - Math.exp(-z * w * x) * (Math.cos(wd * x) + ((z * w) / wd) * Math.sin(wd * x));
+      }
+      const $ = (id) => document.getElementById(id);
+
+      function S(el, { o = 1, x = 0, y = 0, s = 1, sx, sy, r = 0, blur = 0 } = {}) {
+        el.style.opacity = o;
+        el.style.visibility = o <= 0.001 ? 'hidden' : 'visible';
+        el.style.transform = `translate(${x}px,${y}px) rotate(${r}deg) scale(${sx ?? s},${sy ?? s})`;
+        el.style.filter = blur > 0.05 ? `blur(${blur}px)` : 'none';
+      }
+      function show(el, on) {
+        el.style.display = on ? '' : 'none';
+      }
+      // Masked line: rises in on a spring, leaves upward.
+      function rise(el, t, tin, tout = 1e9, outDur = 0.32) {
+        const pin = spring(t, tin, 2.2, 0.82);
+        const pout = eIn(prog(t, tout, outDur));
+        const y = 115 * (1 - pin) - 115 * pout;
+        el.style.transform = `translateY(${y}%)`;
+        el.style.visibility = t < tin || pout >= 1 ? 'hidden' : 'visible';
+      }
+      // Deterministic pseudo-random.
+      function rnd(i) {
+        const x = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+        return x - Math.floor(x);
+      }
+
+      // ---------- logo ----------
+      const LOGO_SVG = `<svg viewBox="0 0 512 512"><g class="dropg"><path d="M256 92C224 140 152 224 152 300a104 104 0 0 0 208 0c0-76-72-160-104-208z" fill="#fff"/><circle cx="256" cy="300" r="40" fill="#E8400F"/></g><path class="arc" d="M126.1 375A150 150 0 0 0 385.9 375" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round" opacity=".55"/><circle class="spark" cx="384" cy="148" r="20" fill="#fff"/></svg>`;
+      function makeLogo(el) {
+        el.innerHTML = `<div class="lbox"></div>${LOGO_SVG}`;
+        const arc = el.querySelector('.arc');
+        const len = 300; // arc length is ~272, round up
+        arc.style.strokeDasharray = len;
+        return { box: el.querySelector('.lbox'), svg: el.querySelector('svg'), drop: el.querySelector('.dropg'), arc, spark: el.querySelector('.spark'), len };
+      }
+      // Draw a logo centred on its container. `grow` 0→1 morphs dot → tile, `inner` 0→1 builds the mark.
+      function drawLogo(L, size, { grow = 1, dot = 26, drop = 1, arc = 1, spark = 1 } = {}) {
+        const s = lerp(dot, size, grow);
+        const rad = lerp(s / 2, (s * 116) / 512, clamp(grow * 1.4));
+        Object.assign(L.box.style, { width: s + 'px', height: s + 'px', left: -s / 2 + 'px', top: -s / 2 + 'px', borderRadius: rad + 'px' });
+        Object.assign(L.svg.style, { width: s + 'px', height: s + 'px', left: -s / 2 + 'px', top: -s / 2 + 'px' });
+        L.drop.setAttribute('transform', `translate(256 300) scale(${Math.max(0, drop)}) translate(-256 -300)`);
+        L.arc.style.strokeDashoffset = L.len * (1 - clamp(arc));
+        L.spark.setAttribute('r', 20 * Math.max(0, spark));
+      }
+      const logo1 = makeLogo($('logo1'));
+      const logo2 = makeLogo($('logo2'));
+      const smallLogos = ['logoM', 'logoN', 'logoW'].map((id) => makeLogo($(id)));
+      drawLogo(smallLogos[0], 28);
+      drawLogo(smallLogos[1], 40);
+      drawLogo(smallLogos[2], 24);
+
+      function ring(el, t, t0, cx, cy, { from = 30, to = 700, dur = 1.3, alpha = 0.55 } = {}) {
+        const p = prog(t, t0, dur);
+        const r = lerp(from, to, expoOut(p));
+        Object.assign(el.style, { left: cx - r / 2 + 'px', top: cy - r / 2 + 'px', width: r + 'px', height: r + 'px' });
+        el.style.opacity = t < t0 || p >= 1 ? 0 : alpha * (1 - p);
+      }
+      // Most recent beat at or before t, from `from`, for repeating pings.
+      const lastBeat = (t, from, every = 1) => from + Math.floor((t - from) / (BEAT * every)) * BEAT * every;
+
+      // ---------- feature cards ----------
+      const ICONS = {
+        share: '<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>',
+        folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+        bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+        lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+        install: '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>',
+        key: '<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M17 6l3 3M14 9l2 2"/>',
+      };
+      const FEATS = [
+        { t: 22.0, bg: '#E8400F', fg: '#fff', icon: 'share', text: 'Share from<br>any app' },
+        { t: 22.5, bg: '#F3F4F6', fg: '#111318', icon: 'folder', text: 'Straight into<br>your folder' },
+        { t: 23.0, bg: '#111318', fg: '#fff', icon: 'bell', text: 'Wakes with<br>a push' },
+        { t: 23.5, bg: '#E8400F', fg: '#fff', icon: 'lock', text: 'End-to-end<br>encrypted' },
+        { t: 24.0, bg: '#F3F4F6', fg: '#111318', icon: 'install', text: 'Installs like<br>an app' },
+        { t: 24.5, bg: '#0D0E11', fg: '#fff', icon: 'key', text: 'Yours.<br><span class="o">Only yours.</span>' },
+      ];
+      const featEls = FEATS.map((f) => {
+        const d = document.createElement('div');
+        d.className = 'feat';
+        d.style.background = f.bg;
+        d.style.color = f.fg;
+        d.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="${f.fg === '#fff' ? '#fff' : '#E8400F'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[f.icon]}</svg><div class="ft display">${f.text}</div>`;
+        $('feats').appendChild(d);
+        return d;
+      });
+
+      // ---------- locker grid ----------
+      const CELL = 150,
+        GAP = 18,
+        GX = 1300,
+        GY = 520;
+      const cells = [];
+      for (let r = 0; r < 3; r++)
+        for (let c = 0; c < 3; c++) {
+          const el = document.createElement('div');
+          el.className = 'cell';
+          const x = GX + (c - 1) * (CELL + GAP) - CELL / 2;
+          const y = GY + (r - 1) * (CELL + GAP) - CELL / 2;
+          el.style.left = x + 'px';
+          el.style.top = y + 'px';
+          const door = document.createElement('div');
+          door.className = 'door';
+          el.appendChild(door);
+          $('cells').appendChild(el);
+          cells.push({ el, door, r, c, d: Math.hypot(r - 1, c - 1) });
+        }
+
+      const HEX = '0123456789abcdef';
+      function hexText(seed) {
+        let s = '';
+        for (let r = 0; r < 11; r++) {
+          for (let c = 0; c < 14; c++) s += HEX[Math.floor(rnd(seed * 1000 + r * 31 + c) * 16)];
+          s += '\n';
+        }
+        return s;
+      }
+
+      const beam = $('beam');
+      const beamLen = beam.getTotalLength();
+      const beamGlow = $('beamGlow');
+      const linkArc = $('linkArc');
+      const linkLen = linkArc.getTotalLength();
+
+      // Cursor keyframes inside the laptop screen (868×534).
+      const CURSOR = [
+        [15.55, 560, 470],
+        [16.25, 700, 92],
+      ];
+
+      // ======================================================
+      function seek(t) {
+        // Kick pulse for the glow, from the first downbeat.
+        const kick = t >= 3 ? Math.exp(-((t - 3) % BEAT) * 7) : 0;
+        S($('glow'), { o: t < 3 ? 0.35 + 0.5 * eOut(prog(t, 0.2, 2.5)) : 0.6 + 0.4 * kick, s: 1 + 0.06 * kick });
+
+        // ---- 1. Beacon (0–3)
+        show($('beacon'), t < 3.1);
+        if (t < 3.1) {
+          const grow = spring(t, 2.0, 1.7, 0.72);
+          const dotIn = spring(t, 0.1, 2.6, 0.6);
+          drawLogo(logo1, 230, {
+            grow,
+            dot: 26 * dotIn,
+            drop: spring(t, 2.12, 2.4, 0.62),
+            arc: eOut(prog(t, 2.3, 0.45)),
+            spark: spring(t, 2.52, 3, 0.5),
+          });
+          ring($('r1'), t, t < 1 ? 0.5 : t < 1.5 ? 1.0 : 1.5, 960, 540, { to: 760 });
+          ring($('r2'), t, 2.0, 960, 540, { from: 200, to: 1500, dur: 1.4, alpha: 0.45 });
+          ring($('r3'), t, 2.5, 960, 540, { from: 220, to: 1900, dur: 1.6, alpha: 0.3 });
+          const shift = spring(t, 2.5, 2.0, 0.85);
+          S($('logo1'), { x: -330 * shift, y: 0 });
+          const w = $('word1');
+          w.style.left = -330 * shift + 150 + 'px';
+          w.style.clipPath = `inset(-20% ${100 - 100 * eOut(prog(t, 2.58, 0.42))}% -20% 0)`;
+          const out = eIn(prog(t, 2.9, 0.2));
+          S($('brand1'), { o: 1 - out, s: 1 + 0.08 * out, blur: 10 * out });
+        }
+
+        // ---- 2. Kinetic type (3–6)
+        show($('type'), t >= 3 && t < 6.1);
+        if (t >= 3 && t < 6.1) {
+          rise($('t1'), t, 3.0, 5.25);
+          rise($('t2'), t, 3.5, 5.32);
+          rise($('t3'), t, 4.0, 5.39);
+          rise($('t4'), t, 4.55, 5.46);
+          $('type').style.transform = `scale(${1 + 0.03 * prog(t, 3, 3)})`;
+        }
+
+        // ---- 3–5. Light canvas (5.5–18.3)
+        const lightOn = t >= 5.45 && t < 18.3;
+        show($('light'), lightOn);
+        if (lightOn) {
+          const wipe = eIO(prog(t, 5.45, 0.6));
+          $('light').style.clipPath = `circle(${1150 * wipe}px at 960px 540px)`;
+
+          rise($('c1').querySelector('.w'), t, 6.6, 8.2);
+          [...$('c2').querySelectorAll('.w')].forEach((el, i) => rise(el, t, 8.5 + i * 0.5, 9.8 + i * 0.04));
+          [...$('c3').querySelectorAll('.w')].forEach((el, i) => rise(el, t, 10.0 + i * 0.5, 11.75 + i * 0.04));
+          rise($('c4').querySelector('.w'), t, 12.0, 14.3);
+          [...$('c5').querySelectorAll('.w')].forEach((el, i) => rise(el, t, 14.75 + i * 0.75, 17.6));
+
+          // Devices arrive.
+          const pIn = spring(t, 5.95, 1.8, 0.8);
+          const lIn = spring(t, 6.12, 1.8, 0.8);
+          // Scene 5 camera: phone leaves, laptop takes centre stage.
+          const cam = spring(t, 14.45, 1.6, 0.86);
+          S($('phone'), { y: 520 * (1 - pIn), r: -6 * (1 - pIn), x: -760 * cam, o: clamp(pIn * 2) });
+          S($('laptop'), { y: 480 * (1 - lIn) + 40 * cam, x: -310 * cam, s: 1 + 0.12 * cam, o: clamp(lIn * 2) });
+
+          // Phone screens.
+          const toSend = eIO(prog(t, 10.0, 0.45));
+          $('pHome').style.transform = `translateX(${-306 * toSend}px)`;
+          $('pSend').style.transform = `translateX(${306 * (1 - toSend)}px)`;
+          $('sweep').style.transform = `rotate(${((t - 6) * 160) % 360}deg)`;
+          const macIn = spring(t, 7.35, 2.6, 0.55);
+          S($('macDot'), { s: macIn, o: clamp(macIn * 3) });
+          $('onlineN').textContent = t >= 7.4 ? '1' : '0';
+          // Tap on Send.
+          const tapP = prog(t, 10.6, 0.5);
+          const tap = $('tap');
+          const tr = 30 + 120 * eOut(tapP);
+          Object.assign(tap.style, { left: 153 - tr + 'px', top: 600 - tr + 'px', width: tr * 2 + 'px', height: tr * 2 + 'px', opacity: t < 10.6 || tapP >= 1 ? 0 : 0.35 * (1 - tapP) });
+          const press = Math.sin(Math.PI * prog(t, 10.55, 0.24));
+          $('sendBtn').style.transform = `scale(${1 - 0.05 * press})`;
+
+          // Laptop screens.
+          const rOut = eIO(prog(t, 10.9, 0.18));
+          const rIn = eOut(prog(t, 11.05, 0.3));
+          S($('mReady'), { o: 1 - rOut, y: -16 * rOut });
+          S($('mRecv'), { o: rIn * (1 - prog(t, 14.4, 0.25)), y: 16 * (1 - rIn) });
+          const pix = t >= 7.5;
+          $('pixDot').style.background = pix ? '#0E8A43' : '#B9BDC6';
+          $('pixLabel').textContent = pix ? 'Pixel 9 · online' : 'Pixel 9 · offline';
+          const orbBeat = t >= 3 ? Math.exp(-((t - 3) % 1) * 3) : 0;
+          S($('orbHalo'), { s: 1 + 0.25 * orbBeat, o: 0.6 + 0.4 * orbBeat });
+
+          // Link arc when they find each other.
+          linkArc.style.strokeDasharray = `2 12`;
+          linkArc.style.opacity = clamp(prog(t, 7.4, 0.4)) * (1 - prog(t, 10.6, 0.3));
+          linkArc.style.strokeDashoffset = -(t * 30);
+          linkArc.style.clipPath = `inset(0 ${100 - 100 * eOut(prog(t, 7.4, 0.7))}% 0 0)`;
+
+          // The beam.
+          const draw = eOut(prog(t, 10.85, 0.4));
+          const fade = prog(t, 13.1, 0.4);
+          beam.style.strokeDasharray = `${beamLen}`;
+          beam.style.strokeDashoffset = beamLen * (1 - draw);
+          beam.style.opacity = t < 10.85 ? 0 : 1 - fade;
+          beamGlow.style.opacity = t < 10.85 ? 0 : (0.18 + 0.12 * Math.sin(t * 20)) * (1 - fade);
+          const SIZES = [4.2, 8.7, 41.1];
+          const FILL = [
+            [11.55, 0.35],
+            [11.8, 0.55],
+            [12.0, 0.95],
+          ];
+          let mb = 0;
+          for (let i = 0; i < 3; i++) {
+            const t0 = 11.0 + i * 0.25;
+            const p = prog(t, t0, 0.85);
+            const el = $('fly' + i);
+            if (t < t0 || p >= 1) {
+              el.style.visibility = 'hidden';
+            } else {
+              const pt = beam.getPointAtLength(beamLen * eIO(p));
+              el.style.visibility = 'visible';
+              el.style.transform = `translate(${pt.x}px,${pt.y}px) scale(${lerp(1, 0.7, p) * (0.6 + 0.4 * eOut(prog(p, 0, 0.15)))}) rotate(${-14 + 28 * p}deg)`;
+              el.style.opacity = 1 - prog(p, 0.85, 0.15);
+            }
+            const fp = eIO(prog(t, FILL[i][0], FILL[i][1]));
+            $('b' + i).style.width = fp * 100 + '%';
+            const k = spring(t, FILL[i][0] + FILL[i][1], 3, 0.5);
+            S($('k' + i), { s: k, o: clamp(k * 3) });
+            mb += fp * SIZES[i];
+          }
+          $('mbCount').textContent = `${mb.toFixed(1)} MB of 54 MB`;
+          const done = spring(t, 13.0, 2.6, 0.55);
+          S($('allOk'), { s: done, o: clamp(done * 3) });
+          $('allOk').style.width = $('allOk').style.height = 40 * clamp(done * 2) + 'px';
+          $('allOk').style.marginRight = (clamp(done * 2) - 1) * 14 + 'px';
+          const sw = eIO(prog(t, 12.95, 0.35));
+          S($('recvT1'), { o: 1 - sw, y: -30 * sw });
+          S($('recvT2'), { o: sw, y: 30 * (1 - sw) });
+
+          // Scene 5: asleep → nudge → open.
+          const sleepIn = eIO(prog(t, 14.45, 0.4));
+          S($('mSleep'), { o: sleepIn });
+          const nIn = spring(t, 15.2, 2.2, 0.75);
+          const click = Math.sin(Math.PI * prog(t, 16.3, 0.2));
+          const nOut = eIO(prog(t, 16.5, 0.3));
+          S($('notif'), { x: 420 * (1 - nIn) + 60 * nOut, o: clamp(nIn * 2) * (1 - nOut), s: 1 - 0.04 * click });
+          const winIn = spring(t, 16.55, 2.2, 0.8);
+          S($('win'), { s: 0.88 + 0.12 * winIn, o: clamp(winIn * 2.5) });
+          const winOk = spring(t, 16.8, 3, 0.5);
+          S($('winOk'), { s: winOk, o: clamp(winOk * 3) });
+          // Cursor glides to the notification and clicks.
+          const cp = eIO(prog(t, CURSOR[0][0], CURSOR[1][0] - CURSOR[0][0]));
+          const cx = lerp(CURSOR[0][1], CURSOR[1][1], cp);
+          const cy = lerp(CURSOR[0][2], CURSOR[1][2], cp) - 40 * Math.sin(Math.PI * cp);
+          S($('cursor'), { x: cx, y: cy, o: clamp(prog(t, 15.4, 0.2)) * (1 - prog(t, 16.9, 0.3)), s: 1 - 0.12 * click });
+          const rp = prog(t, 16.3, 0.45);
+          const rr = 8 + 40 * eOut(rp);
+          Object.assign($('clickR').style, { left: CURSOR[1][1] + 6 - rr + 'px', top: CURSOR[1][2] + 6 - rr + 'px', width: rr * 2 + 'px', height: rr * 2 + 'px', opacity: t < 16.3 || rp >= 1 ? 0 : 0.4 * (1 - rp), background: 'rgba(255,255,255,.6)' });
+        }
+
+        // ---- 6. Locked relay (17.8–22.2)
+        const lockOn = t >= 17.8 && t < 22.2;
+        show($('lock'), lockOn);
+        if (lockOn) {
+          const up = eIO(prog(t, 17.8, 0.45));
+          $('lock').style.transform = `translateY(${1080 * (1 - up)}px)`;
+          rise($('l1'), t, 18.3);
+          rise($('l2'), t, 19.0);
+          rise($('l3'), t, 20.4);
+          rise($('l4'), t, 20.6);
+
+          const cardIn = spring(t, 18.2, 2.2, 0.72);
+          // Shrinks into the middle locker at 20.0.
+          const into = spring(t, 20.0, 2.4, 0.9);
+          const cs = lerp(1, 0.36, into);
+          S($('card'), { y: 260 * (1 - cardIn), s: cs * (0.9 + 0.1 * cardIn), o: clamp(cardIn * 2) * (1 - prog(t, 20.4, 0.1)), r: 6 * (1 - cardIn) });
+          // Scramble.
+          const scr = prog(t, 18.75, 0.65);
+          const hex = $('hex');
+          hex.style.clipPath = `inset(${100 - 100 * eIO(scr)}% 0 0 0)`;
+          hex.textContent = hexText(Math.floor(t * 24));
+          // Padlock drops in, shackle snaps shut on the beat.
+          const lk = spring(t, 19.45, 2.6, 0.6);
+          const shut = eIn(prog(t, 19.62, 0.13));
+          $('shackle').setAttribute('transform', `translate(0 ${-22 + 22 * shut})`);
+          S($('padlock'), { y: -200 * (1 - lk) + -20 * into, s: lerp(1, 0.55, into), o: clamp(lk * 3) * (1 - prog(t, 20.4, 0.1)) });
+
+          for (const c of cells) {
+            const p = spring(t, 19.6 + c.d * 0.1, 2.4, 0.75);
+            S(c.el, { s: 0.6 + 0.4 * p, o: clamp(p * 1.5) });
+            // Other doors are already shut; the middle one closes on the file.
+            const mid = c.r === 1 && c.c === 1;
+            const dp = mid ? eOut(prog(t, 20.42, 0.18)) : 1;
+            c.door.style.transform = `scaleX(${dp})`;
+            c.door.style.opacity = mid ? clamp(dp * 4) : 1;
+          }
+          const ck = spring(t, 21.0, 2.4, 0.8);
+          S($('clock'), { y: 30 * (1 - ck), o: clamp(ck * 2) });
+        }
+
+        // ---- 7. Feature beats (22–25.2)
+        const featOn = t >= 21.95 && t < 25.3;
+        show($('feats'), featOn);
+        if (featOn) {
+          FEATS.forEach((f, i) => {
+            const el = featEls[i];
+            const p = spring(t, f.t, 3.2, 0.92);
+            el.style.display = t >= f.t ? '' : 'none';
+            const dy = 1080 * (1 - p);
+            el.style.transform = `translateY(${Math.abs(dy) < 8 ? 0 : dy}px)`;
+            const txt = el.querySelector('.ft');
+            const ic = el.querySelector('svg');
+            const q = spring(t, f.t + 0.06, 3, 0.8);
+            txt.style.transform = `translateY(${80 * (1 - q)}px)`;
+            ic.style.transform = `scale(${0.5 + 0.5 * spring(t, f.t + 0.02, 3.2, 0.55)}) rotate(${-20 * (1 - q)}deg)`;
+          });
+        }
+
+        // ---- 8. End card (25–30)
+        const endOn = t >= 25.0;
+        show($('end'), endOn);
+        if (endOn) {
+          const eIn_ = prog(t, 25.0, 0.25);
+          $('end').style.opacity = eIn_;
+          drawLogo(logo2, 210, {
+            grow: spring(t, 25.15, 1.8, 0.72),
+            dot: 26 * spring(t, 25.0, 3, 0.6),
+            drop: spring(t, 25.27, 2.4, 0.62),
+            arc: eOut(prog(t, 25.45, 0.45)),
+            spark: spring(t, 25.65, 3, 0.5),
+          });
+          ring($('e1'), t, 25.15, 960, 380, { from: 200, to: 1600, dur: 1.5, alpha: 0.5 });
+          ring($('e2'), t, lastBeat(t, 26.0, 2), 960, 380, { from: 220, to: 900, dur: 1.4, alpha: 0.35 });
+          ring($('e3'), t, lastBeat(t, 27.0, 2), 960, 380, { from: 220, to: 900, dur: 1.4, alpha: 0.35 });
+          rise($('ew'), t, 25.6);
+          rise($('et'), t, 26.1);
+          const u = spring(t, 26.6, 2.2, 0.8);
+          S($('eu'), { o: clamp(u * 2), y: 30 * (1 - u) });
+          S($('ep'), { o: clamp(prog(t, 27.1, 0.5)) });
+          S($('glow2'), { o: 0.7 + 0.3 * kick * (t < 29 ? 1 : 0), s: 1 + 0.05 * kick });
+          // Gentle fade to black at the very end.
+          $('stage').style.filter = `brightness(${1 - 0.9 * eIO(prog(t, 29.3, 0.7))})`;
+        } else {
+          $('stage').style.filter = 'none';
+        }
+      }
+      window.seek = seek;
+      window.DURATION = DURATION;
+
+      // ---------- player ----------
+      const stage = $('stage');
+      function fit() {
+        const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+        stage.style.transform = `translate(${(innerWidth - 1920 * s) / 2}px,${(innerHeight - 1080 * s) / 2}px) scale(${s})`;
+      }
+      const render = new URLSearchParams(location.search).has('render');
+      if (render) {
+        document.body.classList.add('render');
+        seek(0);
+      } else {
+        fit();
+        addEventListener('resize', fit);
+        const audio = new Audio('audio.wav');
+        let playing = false,
+          t = 0,
+          start = 0;
+        const btn = $('play'),
+          scrub = $('scrub'),
+          time = $('time');
+        function frame(now) {
+          if (playing) {
+            t = audio.readyState >= 2 && !audio.paused ? audio.currentTime : (now - start) / 1000;
+            if (t >= DURATION) {
+              t = DURATION;
+              playing = false;
+              audio.pause();
+              btn.textContent = 'Replay';
+            }
+          }
+          seek(t);
+          scrub.value = t;
+          time.textContent = t.toFixed(2);
+          requestAnimationFrame(frame);
+        }
+        btn.onclick = () => {
+          if (playing) {
+            playing = false;
+            audio.pause();
+            btn.textContent = 'Play';
+            return;
+          }
+          if (t >= DURATION) t = 0;
+          playing = true;
+          start = performance.now() - t * 1000;
+          audio.currentTime = t;
+          audio.play().catch(() => {});
+          btn.textContent = 'Pause';
+        };
+        scrub.oninput = () => {
+          t = +scrub.value;
+          start = performance.now() - t * 1000;
+          audio.currentTime = t;
+        };
+        stage.onclick = () => btn.click();
+        document.fonts.ready.then(() => requestAnimationFrame(frame));
+      }
+    </script>
+  </body>
+</html>

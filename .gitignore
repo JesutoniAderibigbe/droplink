@@ -14,3 +14,5 @@ test-results
 playwright-report
 .secrets/
 .netlify
+promo/out
+promo/audio.wav

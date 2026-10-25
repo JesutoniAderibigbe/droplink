@@ -4,3 +4,4 @@ dev-dist
 supabase/.temp
 package-lock.json
 public/icons/*.png
+promo
