@@ -5,7 +5,11 @@ the animation's cue times. Pure standard library, so it runs anywhere:
 import array, math, random, struct, wave, os
 
 SR = 44100
-DUR = 30.0
+DUR = 34.0
+# The Android → iPhone scene is spliced in at P0 for PLEN seconds (8 beats):
+# cues after it move later by PLEN, the beat just keeps going.
+P0 = 17.8
+PLEN = 4.0
 N = int(SR * DUR)
 BEAT = 0.5
 L = array.array('f', [0.0]) * N   # dry mix
@@ -14,7 +18,9 @@ VERB = array.array('f', [0.0]) * N  # reverb send (mono)
 rng = random.Random(7)
 TAU = 2 * math.pi
 
-def add(t, samples, gain=1.0, pan=0.0, verb=0.0):
+def add(t, samples, gain=1.0, pan=0.0, verb=0.0, raw=False):
+    if not raw and t >= P0 - 0.01:
+        t += PLEN
     i0 = int(t * SR)
     gl = gain * math.cos((pan + 1) * math.pi / 4) * 1.41
     gr = gain * math.sin((pan + 1) * math.pi / 4) * 1.41
@@ -169,24 +175,24 @@ add(2.3, noise_sweep(0.7, 600, 9000), 0.3)
 
 # Beat 3.0 → 21.75
 t = 3.0
-while t < 21.99:
-    add(t, kick(), 0.85)
+while t < 21.99 + PLEN:
+    add(t, kick(), 0.85, raw=True)
     b = round((t - 3) / BEAT)
     if t >= 6.0:
-        add(t + 0.25, hat(), 0.35, 0.3)
-        if b % 2 == 1: add(t, clap(), 0.5, -0.1, verb=0.25)
+        add(t + 0.25, hat(), 0.35, 0.3, raw=True)
+        if b % 2 == 1: add(t, clap(), 0.5, -0.1, verb=0.25, raw=True)
     root, ch = chord_at(t)
     for e in (0, 0.25):
-        add(t + e, bass(note(root - 24 + (12 if e and b % 4 == 3 else 0)), 0.22), 0.32)
+        add(t + e, bass(note(root - 24 + (12 if e and b % 4 == 3 else 0)), 0.22), 0.32, raw=True)
     if t >= 6.0:
         for s in range(2):
             f = note(ch[(b * 2 + s) % 4] + 12)
-            add(t + s * 0.25, pluck(f), 0.11, [-0.5, 0.5][s], verb=0.35)
+            add(t + s * 0.25, pluck(f), 0.11, [-0.5, 0.5][s], verb=0.35, raw=True)
     t += BEAT
-for bar in range(int((21.99 - 3) // 2) + 1):
+for bar in range(int((21.99 + PLEN - 3) // 2) + 1):
     tb = 3 + bar * 2
-    if tb >= 6 and tb < 22:
-        add(tb, pad([note(n) for n in chord_at(tb)[1]], 2.1, 0.3, 0.4), 0.55, verb=0.3)
+    if tb >= 6 and tb < 22 + PLEN:
+        add(tb, pad([note(n) for n in chord_at(tb)[1]], 2.1, 0.3, 0.4), 0.55, verb=0.3, raw=True)
 
 # Cues
 for t in (3.0, 3.5, 4.0): add(t, click(1800, 0.05), 0.22)
@@ -213,6 +219,20 @@ for i in range(5): add(19.6 + i * 0.06, click(1400 + 200 * i, 0.03), 0.08, -0.6 
 add(20.42, kick(0.3, 0.6), 0.5); add(20.45, click(1600, 0.06), 0.3, verb=0.3)
 add(21.0, tone(note(88), 0.3, 0.002, 0.08), 0.12, verb=0.4)
 add(21.3, noise_sweep(0.7, 400, 10000), 0.35)
+
+# Android → iPhone scene (absolute times).
+add(P0, noise_sweep(0.5, 200, 3500, False), 0.35, verb=0.3, raw=True)
+add(P0 + 0.25, noise_sweep(0.4, 400, 3000, False), 0.2, -0.4, raw=True)
+add(P0 + 0.5, click(2200, 0.04), 0.18, raw=True)
+add(P0 + 1.4, tone(note(93), 0.12, 0.001, 0.03), 0.18, 0.5, raw=True)
+add(P0 + 1.47, tone(note(98), 0.12, 0.001, 0.03), 0.16, 0.5, raw=True)
+add(P0 + 1.8, click(5000, 0.025), 0.4, 0.5, raw=True)
+add(P0 + 2.0, chime([note(n) for n in (76, 81, 85)], 0.07, 0.45), 0.24, verb=0.6, raw=True)
+for t in (P0 + 2.2, P0 + 2.7): add(t, click(2400, 0.04), 0.18, raw=True)
+add(P0 + 2.55, click(4200, 0.03), 0.4, -0.4, raw=True)
+add(P0 + 2.6, noise_sweep(0.8, 500, 7000, False), 0.4, verb=0.3, raw=True)
+add(P0 + 3.35, chime([note(n) for n in (81, 85, 88, 93)], 0.05, 0.5), 0.24, 0.4, verb=0.7, raw=True)
+add(P0 + 3.6, tone(note(100), 0.4, 0.001, 0.06), 0.1, 0.5, verb=0.5, raw=True)
 
 # Feature hits 22.0–24.5: stab chords climbing.
 STABS = [57, 53, 60, 55, 62, 64]
@@ -262,7 +282,7 @@ for i in range(N):
     peak = max(peak, abs(L[i]), abs(R[i]))
 gain = 1.6 / peak
 out = bytearray()
-fade0 = int(29.0 * SR)
+fade0 = int((DUR - 1.0) * SR)
 for i in range(N):
     f = 1.0 if i < fade0 else max(0.0, 1 - (i - fade0) / (N - fade0))
     l = math.tanh(L[i] * gain) * 0.89 * f

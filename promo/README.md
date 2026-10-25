@@ -1,6 +1,6 @@
 # DropLink ad
 
-A 30-second, 60 fps motion-graphics ad for DropLink, written as code: 16:9 (1920×1080) and a
+A 34-second, 60 fps motion-graphics ad for DropLink, written as code: 16:9 (1920×1080) and a
 9:16 vertical cut (1080×1920) from the same timeline.
 
 - `index.html`: the animation. Every frame is a pure function of time (`seek(t)`), with closed-form
@@ -28,6 +28,10 @@ node promo/render.mjs --vertical 1          # 9:16 cut → out/video-vertical.mp
 | 6–10 s | Light canvas: phone and laptop rise in; the radar finds the MacBook. "No pairing. No cables. No codes." |
 | 10–14.5 s | "Pick. Tap. Beam." Three files ride an arc to the laptop; progress fills; "Everything arrived." |
 | 14.5–18 s | Laptop asleep: a notification nudges, the cursor clicks, files are there. |
-| 18–22 s | "Nobody home? It waits, locked." The file scrambles, a padlock snaps shut, it goes into a locker. |
-| 22–25 s | Six feature cards, one per beat. |
-| 25–30 s | Logo, wordmark, tagline, URL. |
+| 17.8–21.8 s | "Not just your devices." An iPhone scans the Android's QR code, both show "Connected"; a 50 MP photo flies across: "Android to iPhone. Full quality." |
+| 22–26 s | "Nobody home? It waits, locked." The file scrambles, a padlock snaps shut, it goes into a locker. |
+| 26–29 s | Six feature cards, one per beat. |
+| 29–34 s | Logo, wordmark, tagline, URL. |
+
+The people scene is spliced in with `P0`/`PLEN` (in `index.html` and `synth.py`): everything after
+it plays 8 beats later, so cues stay on the music grid.
