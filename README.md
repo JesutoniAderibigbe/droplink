@@ -8,7 +8,7 @@ AirDrop-style file sharing between **your own** devices, as an installable web a
 - If the other device has DropLink open, files go **peer to peer over WebRTC** and never touch the
   server.
 - If it doesn't, it gets a **push notification**. Tap it and the transfer starts.
-- If nobody answers within ~20 s, files up to 100 MB are **end-to-end encrypted** in the browser
+- If there is no direct link within ~10 s, or nobody answers within ~20 s, files up to 100 MB are **end-to-end encrypted** in the browser
   and parked in a relay. They're downloaded the next time DropLink opens there, then deleted
   (and always after 24 h).
 - On desktop Chrome or Edge, files stream straight into a folder you picked once.
@@ -58,6 +58,113 @@ supabase/
 tests/unit/       Vitest (pure logic)       tests/rls/   against local Supabase
 e2e/              Playwright: two browser contexts = two devices
 ```
+
+## System design
+
+Live: **https://droplink-app-m8bs.netlify.app** · Source and CI/CD: this repo (GitHub Actions).
+
+### Components
+
+| Layer              | Technology                                                               | Job                                                                                      |
+| ------------------ | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Client             | Svelte 5 (runes) + Vite, installable PWA                                 | UI, WebRTC, encryption, saving files. All file bytes are handled here.                   |
+| Service worker     | Workbox (`src/sw.ts`)                                                    | Offline shell, Android share target, push notifications, notification click.             |
+| Identity           | Supabase Auth (email + password, no emails sent)                         | One account = one set of devices.                                                        |
+| Database           | Supabase Postgres + Row Level Security                                   | Devices, public keys, transfer metadata, quotas. Never file contents or plaintext names. |
+| Signaling          | Supabase Realtime (Presence + Broadcast) on private channel `user:{uid}` | Who's online; WebRTC offer/answer/ICE; `relay-ready` pings.                              |
+| Direct transport   | WebRTC data channel (STUN + Cloudflare TURN)                             | Peer-to-peer file bytes.                                                                 |
+| Fallback transport | Supabase Storage bucket `relay`                                          | End-to-end encrypted chunks when the other device isn't reachable.                       |
+| Server logic       | Supabase Edge Functions (Deno)                                           | `turn-credentials`, `notify-device` (Web Push), `relay-cleanup`, `delete-account`.       |
+| Scheduling         | `pg_cron` + `pg_net` + Vault                                             | Hourly relay cleanup.                                                                    |
+| Hosting            | Netlify (static `dist/` + `_headers` CSP)                                | Serves the app. No server code runs there.                                               |
+
+### What happens when you press Send
+
+```
+ Sender                              Supabase                               Receiver
+   │ 1. insert transfers row ───────▶ Postgres (RLS + quota triggers)
+   │ 2. is the target in Presence?
+   │    yes ──▶ offer/answer/ICE via Realtime Broadcast ──────────────────────▶│
+   │ 3. WebRTC data channel ═════════ direct (LAN / internet) or via TURN ════▶│ writes to folder
+   │                                                                           │ or Downloads
+   │    no ───▶ notify-device Edge Fn ──▶ Web Push ──▶ notification ─ tap ──▶ │ opens DropLink
+   │ 4. no direct link (10 s) or nobody answers (20 s):
+   │    encrypt in browser ──▶ Storage "relay" (ciphertext only) ──▶ relay-ready ping ─▶│
+   │                                                                  download, decrypt,
+   │                                                                  save, delete copy
+   │ 5. >100 MB and offline: stays in the sender's outbox (IndexedDB) until it can go direct
+```
+
+The engine always tries the cheapest, fastest path first and falls back quickly:
+
+1. **Direct, same network** (both "host" ICE candidates): fastest, limited only by Wi-Fi.
+2. **Direct over the internet** (STUN "srflx" candidates): limited by the slower internet upload.
+3. **Cloudflare TURN** (when NAT blocks direct): same limit, plus the TURN hop.
+4. **Encrypted relay** via Supabase Storage (≤ 100 MB, deleted after download or 24 h).
+5. **Outbox** for anything else, retried when both devices are online.
+
+The Send and Receive screens show which route was used ("Direct · same network", "Direct · over the
+internet", "Via TURN relay server"), read from WebRTC `getStats()`.
+
+### Data channel protocol
+
+- Files are split into 64 KB chunks with a 21-byte binary header (type, file index, chunk index).
+- **Backpressure**: the sender pauses when the channel buffer passes 8 MB and resumes below 1 MB, so
+  memory stays flat for any file size.
+- **Flow control**: the receiver acks every 2 MB; the sender never has more than 16 MB unacked.
+- **Resume**: if the connection drops, both sides reconnect (up to 5 attempts) and continue from the
+  last acked byte.
+- Full wire format: [docs/PROTOCOL.md](docs/PROTOCOL.md).
+
+### Data model (Postgres)
+
+| Table                | Holds                                                                                  |
+| -------------------- | -------------------------------------------------------------------------------------- |
+| `profiles`           | One row per user (created by trigger on sign-up).                                      |
+| `devices`            | Name, platform, public ECDH key, last seen.                                            |
+| `push_subscriptions` | Web Push endpoint per device.                                                          |
+| `transfers`          | From/to device, file count, total size, status. A trigger enforces the state machine.  |
+| `relay_objects`      | Each encrypted object in Storage; Storage policies only allow uploads registered here. |
+| `usage_daily`        | Per-user counters for quotas.                                                          |
+
+Quotas are enforced **in the database** by triggers (`limit_transfers_per_hour`,
+`limit_relay_bytes_per_day`, …), so a modified client can't bypass them. They fail with `PT429` /
+`PT413`, which the app shows as friendly messages.
+
+### Security model
+
+- **RLS everywhere**: every row is scoped to `auth.uid()`; column grants stop clients from editing
+  fields like status or sizes directly.
+- **Realtime Authorization**: only your own sessions can join `user:{uid}`.
+- **End-to-end encryption on the relay**: ECDH P-256 (sender's ephemeral key + receiver's device key)
+  → HKDF-SHA-256 → AES-GCM-256 per 1 MiB chunk, unique IV (prefix ‖ file index ‖ chunk index), with
+  associated data binding each chunk to its transfer. The server stores only ciphertext; file names
+  live in an encrypted manifest.
+- **P2P** traffic is encrypted by WebRTC (DTLS), including through TURN.
+- **CSP**: `dist/_headers` allows scripts only from the site and network calls only to your Supabase
+  project and Cloudflare TURN.
+- **Edge Functions** verify the user's JWT in code; the cron function needs a secret from Vault.
+
+### Scaling and cost
+
+- The server never carries P2P bytes, so most transfers cost nothing beyond signaling messages.
+- Relay storage is bounded: 100 MB per transfer, 500 MB per user per day, 20 relayed transfers per
+  hour, and hourly cleanup deletes anything older than 24 h.
+- TURN traffic is metered by Cloudflare (free allowance per month, then per GB). It's only used when
+  a direct connection is impossible.
+
+### CI/CD
+
+`.github/workflows/ci-cd.yml`, on every push and pull request:
+
+```
+checks (lint, types, unit tests, build)
+   ├──▶ db-tests (local Supabase: RLS, Storage, Realtime, quotas)
+   └──▶ e2e (Playwright, two browser contexts = two devices)
+              └──▶ deploy (main only): db push → functions deploy → build → Netlify upload → smoke test
+```
+
+Production secrets live in GitHub Actions secrets and Supabase secrets, never in the repo.
 
 ## Local development
 
@@ -173,6 +280,10 @@ service worker (needed for install, share target and push) over a self-signed ce
 
 ### 2. Netlify
 
+Normally you don't touch Netlify: the GitHub Actions `deploy` job builds `dist/` and uploads it with
+`netlify deploy --no-build` (needs the `NETLIFY_AUTH_TOKEN`, `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`
+secrets). To set it up by hand instead:
+
 1. New site from this repo. Build command and publish dir come from `netlify.toml`.
 2. Environment variables: `VITE_SUPABASE_URL=https://<ref>.supabase.co`,
    `VITE_SUPABASE_ANON_KEY=<anon or publishable key>`, `VITE_VAPID_PUBLIC_KEY=<public key>`.
@@ -210,16 +321,17 @@ service worker (needed for install, share target and push) over a self-signed ce
 
 ## Troubleshooting
 
-| Symptom                                                          | Fix                                                                                                                                                                                          |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Service worker doesn't register on the phone / no Install option | The certificate isn't trusted. Use mkcert and install its root CA on the phone.                                                                                                              |
-| "Too many attempts" on sign-in                                   | Supabase rate limits; wait a minute. Locally they're raised in `config.toml`.                                                                                                                |
-| Devices never show as online                                     | Check that both are signed in to the same account and that `/realtime/v1` is reachable (Network tab, WS). A private channel `CHANNEL_ERROR` means a wrong or expired session. Sign in again. |
-| Transfers stay on "Connecting…" then relay                       | No direct path between the networks. Configure Cloudflare TURN secrets, and check `turn-credentials` returns `turn: true`.                                                                   |
-| No push notifications                                            | Permission granted? Chrome running (Mac)? `VAPID_*` set in both places, keys from the same pair? Function logs show `push failed 403` if the keys don't match.                               |
-| Files go to Downloads instead of the folder                      | Click "Allow access to <folder>" on Home or Received (permission resets after a restart).                                                                                                    |
-| `supabase start` port errors                                     | Another local project uses the ports; stop it or change the ports in `supabase/config.toml`.                                                                                                 |
-| Weird e2e timeouts on a laptop                                   | The Mac slept. Use `caffeinate -i`.                                                                                                                                                          |
+| Symptom                                                          | Fix                                                                                                                                                                                                                                                            |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Service worker doesn't register on the phone / no Install option | The certificate isn't trusted. Use mkcert and install its root CA on the phone.                                                                                                                                                                                |
+| "Too many attempts" on sign-in                                   | Supabase rate limits; wait a minute. Locally they're raised in `config.toml`.                                                                                                                                                                                  |
+| Devices never show as online                                     | Check that both are signed in to the same account and that `/realtime/v1` is reachable (Network tab, WS). A private channel `CHANNEL_ERROR` means a wrong or expired session. Sign in again.                                                                   |
+| Big transfers are slow                                           | Look at the route line while sending. "Direct · same network" is Wi-Fi speed. "Over the internet" or "Via TURN" on the same Wi-Fi means the router isolates devices (guest network / AP isolation): turn it off, or connect the laptop to the phone's hotspot. |
+| Transfers stay on "Connecting…" then relay                       | No direct path between the networks. Configure Cloudflare TURN secrets, and check `turn-credentials` returns `turn: true`.                                                                                                                                     |
+| No push notifications                                            | Permission granted? Chrome running (Mac)? `VAPID_*` set in both places, keys from the same pair? Function logs show `push failed 403` if the keys don't match.                                                                                                 |
+| Files go to Downloads instead of the folder                      | Click "Allow access to <folder>" on Home or Received (permission resets after a restart).                                                                                                                                                                      |
+| `supabase start` port errors                                     | Another local project uses the ports; stop it or change the ports in `supabase/config.toml`.                                                                                                                                                                   |
+| Weird e2e timeouts on a laptop                                   | The Mac slept. Use `caffeinate -i`.                                                                                                                                                                                                                            |
 
 ## What has been verified, and how
 
